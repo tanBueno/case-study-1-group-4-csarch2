@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Machine 4 - Decimal 32-bit Floating-Point Machine</title>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============================= HEADER ============================= -->
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-tag">MACHINE&nbsp;04</span>
+      <h1 class="brand-title">Decimal 32-bit Floating-Point Machine</h1>
+      <p class="brand-sub">IEEE&nbsp;754 decimal single-precision - sign - exponent - mantissa</p>
+    </div>
+  </header>
+
+  <!-- ================= SIGNATURE ELEMENT: 32-BIT REGISTER STRIP ================= -->
+  <section class="register-strip" aria-label="32-bit field layout">
+    <div class="register-track">
+      <div class="field-block sign"      style="--span:1">
+        <span class="field-label">SIGN</span>
+        <span class="field-bits">1 bit</span>
+      </div>
+      <div class="field-block exponent"  style="--span:8">
+        <span class="field-label">EXPONENT</span>
+        <span class="field-bits">8 bits</span>
+      </div>
+      <div class="field-block mantissa"  style="--span:23">
+        <span class="field-label">MANTISSA</span>
+        <span class="field-bits">23 bits</span>
+      </div>
+    </div>
+    <div class="register-caption">32 bits total - placeholder values shown at rest</div>
+  </section>
+
+  <!-- ============================== NAV TABS ============================== -->
+  <nav class="task-nav" aria-label="Task selection">
+    <button class="task-tab is-active" data-task="convert">
+      <span class="tab-index">01</span>
+      <span class="tab-name">Decimal → IEEE 754</span>
+    </button>
+    <button class="task-tab" data-task="rounding">
+      <span class="tab-index">02</span>
+      <span class="tab-name">Rounding Methods</span>
+    </button>
+    <button class="task-tab" data-task="arithmetic">
+      <span class="tab-index">03</span>
+      <span class="tab-name">Arithmetic Operations</span>
+    </button>
+  </nav>
+
+  <!-- ============================== MAIN ============================== -->
+  <main class="task-panels">
+
+    <!-- ---------- TASK 1: CONVERTER ---------- -->
+    <section class="task-panel is-active" id="panel-convert" data-panel="convert">
+      <header class="panel-header">
+        <h2>Decimal -> Decimal-Based Single-Precision</h2>
+        <p class="panel-desc">Convert a decimal number into its IEEE 754 representation, including special cases (zero, infinity, NaN, subnormal).</p>
+      </header>
+
+      <div class="panel-grid">
+        <!-- Input column -->
+        <div class="card input-card">
+          <h3 class="card-title">Input</h3>
+          <label class="field">
+            <span class="field-name">Decimal number</span>
+            <input type="text" placeholder="e.g. -12.375" disabled />
+          </label>
+          <button class="btn btn-primary" disabled>Convert</button>
+        </div>
+
+        <!-- Output column -->
+        <div class="card output-card">
+          <h3 class="card-title">Output</h3>
+
+          <div class="output-row">
+            <span class="output-label">Binary (spaced)</span>
+            <div class="mono-box placeholder">- sign - exponent - mantissa -</div>
+          </div>
+
+          <div class="output-row">
+            <span class="output-label">Hexadecimal</span>
+            <div class="mono-box placeholder">0x-</div>
+          </div>
+
+          <div class="output-row">
+            <span class="output-label">Special case flag</span>
+            <div class="mono-box placeholder">-</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- TASK 2: ROUNDING ---------- -->
+    <section class="task-panel" id="panel-rounding" data-panel="rounding">
+      <header class="panel-header">
+        <h2>Rounding Methods</h2>
+        <p class="panel-desc">Round a decimal or binary value to a target number of digits using all four rounding methods.</p>
+      </header>
+
+      <div class="panel-grid">
+        <div class="card input-card">
+          <h3 class="card-title">Input</h3>
+          <label class="field">
+            <span class="field-name">Value</span>
+            <input type="text" placeholder="e.g. 10110.1101 or 12.6789" disabled />
+          </label>
+          <label class="field">
+            <span class="field-name">Format</span>
+            <select disabled>
+              <option>Decimal</option>
+              <option>Binary</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-name">Target digits</span>
+            <input type="number" placeholder="e.g. 3" disabled />
+          </label>
+          <button class="btn btn-primary" disabled>Round</button>
+        </div>
+
+        <div class="card output-card">
+          <h3 class="card-title">Output — all four methods</h3>
+          <div class="method-list">
+            <div class="method-row">
+              <span class="method-name">Chopping</span>
+              <div class="mono-box placeholder">—</div>
+            </div>
+            <div class="method-row">
+              <span class="method-name">Round-up</span>
+              <div class="mono-box placeholder">—</div>
+            </div>
+            <div class="method-row">
+              <span class="method-name">Round-down</span>
+              <div class="mono-box placeholder">—</div>
+            </div>
+            <div class="method-row">
+              <span class="method-name">Round-to-nearest, ties-to-even</span>
+              <div class="mono-box placeholder">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- TASK 3: ARITHMETIC ---------- -->
+    <section class="task-panel" id="panel-arithmetic" data-panel="arithmetic">
+      <header class="panel-header">
+        <h2>Arithmetic Operations</h2>
+        <p class="panel-desc">Perform subtraction or division on two operands (decimal or IEEE hex) with a rounding method applied, showing the full step-by-step solution.</p>
+      </header>
+
+      <div class="panel-grid">
+        <div class="card input-card">
+          <h3 class="card-title">Input</h3>
+          <label class="field">
+            <span class="field-name">Operand A</span>
+            <input type="text" placeholder="decimal or IEEE hex" disabled />
+          </label>
+          <label class="field">
+            <span class="field-name">Operand B</span>
+            <input type="text" placeholder="decimal or IEEE hex" disabled />
+          </label>
+          <label class="field">
+            <span class="field-name">Operation</span>
+            <select disabled>
+              <option>Subtraction</option>
+              <option>Division</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-name">Rounding method</span>
+            <select disabled>
+              <option>Chopping</option>
+              <option>Round-up</option>
+              <option>Round-down</option>
+              <option>Round-to-nearest, ties-to-even</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" disabled>Compute</button>
+        </div>
+
+        <div class="card output-card">
+          <h3 class="card-title">Step-by-step solution</h3>
+          <ol class="steps-list">
+            <li class="step-item placeholder">Step details will appear here.</li>
+          </ol>
+
+          <h3 class="card-title">Final result</h3>
+          <div class="output-row">
+            <span class="output-label">Decimal</span>
+            <div class="mono-box placeholder">-</div>
+          </div>
+          <div class="output-row">
+            <span class="output-label">Binary (spaced)</span>
+            <div class="mono-box placeholder">- sign - exponent - mantissa -</div>
+          </div>
+          <div class="output-row">
+            <span class="output-label">Hexadecimal</span>
+            <div class="mono-box placeholder">0x</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================== FOOTER ============================== -->
+  <footer class="site-footer">
+    <p>Machine 4 - Decimal 32-bit Floating-Point Machine</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
