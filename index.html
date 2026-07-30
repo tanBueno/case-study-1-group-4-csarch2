@@ -151,29 +151,30 @@
           <h3 class="card-title">Input</h3>
           <label class="field">
             <span class="field-name">Operand A</span>
-            <input type="text" placeholder="decimal or IEEE hex" disabled />
+             <input type="text" id="arith-operand-a" placeholder="0.0, 0x0" />
           </label>
           <label class="field">
             <span class="field-name">Operand B</span>
-            <input type="text" placeholder="decimal or IEEE hex" disabled />
+            <input type="text" id="arith-operand-b" placeholder="0.0, 0x0" />
           </label>
           <label class="field">
-            <span class="field-name">Operation</span>
-            <select disabled>
-              <option>Subtraction</option>
-              <option>Division</option>
+           <span class="field-name">Operation</span>
+            <select id="arith-operation">
+              <option value="sub">Subtraction</option>
+              <option value="div">Division</option>
             </select>
           </label>
           <label class="field">
             <span class="field-name">Rounding method</span>
-            <select disabled>
-              <option>Chopping</option>
-              <option>Round-up</option>
-              <option>Round-down</option>
-              <option>Round-to-nearest, ties-to-even</option>
+            <select id="arith-rounding">
+              <option value="chop">Chopping</option>
+              <option value="roundup">Round-up</option>
+              <option value="rounddown">Round-down</option>
+              <option value="nearestEven">Round-to-nearest, ties-to-even</option>
             </select>
           </label>
-          <button class="btn btn-primary" disabled>Compute</button>
+          <button class="btn btn-primary" id="arith-compute-btn">Compute</button>
+          <p class="error-msg" id="arith-error"></p>
         </div>
 
         <div class="card output-card">
@@ -185,15 +186,15 @@
           <h3 class="card-title">Final result</h3>
           <div class="output-row">
             <span class="output-label">Decimal</span>
-            <div class="mono-box placeholder">-</div>
+            <div class="mono-box placeholder" id="arith-result-decimal">—</div>
           </div>
           <div class="output-row">
             <span class="output-label">Binary (spaced)</span>
-            <div id="out-convert-binary" class="mono-box placeholder">- sign - exponent - mantissa -</div>
+            <div class="mono-box placeholder" id="arith-result-binary">— sign — exponent — mantissa —</div>
           </div>
           <div class="output-row">
             <span class="output-label">Hexadecimal</span>
-            <div class="mono-box placeholder">0x</div>
+            <div class="mono-box placeholder" id="arith-result-hex">0x</div>
           </div>
         </div>
       </div>
