@@ -7,35 +7,14 @@
 
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
 
-  <!-- ============================= HEADER ========================/===== -->
+  <!-- ============================= HEADER ============================= -->
   <header class="site-header">
     <div class="brand">
-      <span class="brand-tag">MACHINE&nbsp;04</span>
       <h1 class="brand-title">Decimal 32-bit Floating-Point Machine</h1>
-      <p class="brand-sub">IEEE&nbsp;754 decimal single-precision - sign - exponent - mantissa</p>
+      <p class="brand-sub">IEEE 754 decimal single-precision - sign - exponent - mantissa</p>
     </div>
   </header>
-
-  <!-- ================= SIGNATURE ELEMENT: 32-BIT REGISTER STRIP ================= -->
-  <section class="register-strip" aria-label="32-bit field layout">
-    <div class="register-track">
-      <div class="field-block sign"      style="--span:1">
-        <span class="field-label">SIGN</span>
-        <span class="field-bits">1 bit</span>
-      </div>
-      <div class="field-block exponent"  style="--span:8">
-        <span class="field-label">EXPONENT</span>
-        <span class="field-bits">8 bits</span>
-      </div>
-      <div class="field-block mantissa"  style="--span:23">
-        <span class="field-label">MANTISSA</span>
-        <span class="field-bits">23 bits</span>
-      </div>
-    </div>
-    <div class="register-caption">32 bits total - placeholder values shown at rest</div>
-  </section>
 
   <!-- ============================== NAV TABS ============================== -->
   <nav class="task-nav" aria-label="Task selection">
@@ -69,9 +48,9 @@
           <h3 class="card-title">Input</h3>
           <label class="field">
             <span class="field-name">Decimal number</span>
-            <input type="text" id="input-convert-decimal"/>
+            <input type="text" placeholder="e.g. -12.375" disabled />
           </label>
-          <button id="btn-convert" class="btn btn-primary">Convert</button>
+          <button class="btn btn-primary" disabled>Convert</button>
         </div>
 
         <!-- Output column -->
@@ -80,17 +59,17 @@
 
           <div class="output-row">
             <span class="output-label">Binary (spaced)</span>
-            <div id="out-convert-binary" class="mono-box placeholder">- sign - exponent - mantissa -</div>
+            <div class="mono-box placeholder">- sign - exponent - mantissa -</div>
           </div>
 
           <div class="output-row">
             <span class="output-label">Hexadecimal</span>
-            <div id="out-convert-hex" class="mono-box placeholder">0x-</div>
+            <div class="mono-box placeholder">0x-</div>
           </div>
 
           <div class="output-row">
             <span class="output-label">Special case flag</span>
-            <div id="out-convert-special" class="mono-box placeholder">-</div>
+            <div class="mono-box placeholder">-</div>
           </div>
         </div>
       </div>
@@ -100,50 +79,62 @@
     <section class="task-panel" id="panel-rounding" data-panel="rounding">
       <header class="panel-header">
         <h2>Rounding Methods</h2>
-        <p class="panel-desc">Round a decimal or binary value to a target number of digits using all four rounding methods.</p>
+        <p class="panel-desc">Round a decimal or binary value to a target number of digits using all four standard methods.</p>
       </header>
-
+    
       <div class="panel-grid">
+        
+        <!-- Input Card -->
         <div class="card input-card">
-          <h3 class="card-title">Input</h3>
+          <h3 class="card-title">Input Configuration</h3>
+          
           <label class="field">
             <span class="field-name">Value</span>
-            <input type="text" placeholder="e.g. 10110.1101 or 12.6789" disabled />
+            <input type="text" id="round-val" placeholder="e.g., 101011.1011 or 12.3456" />
           </label>
+          
           <label class="field">
             <span class="field-name">Format</span>
-            <select disabled>
-              <option>Decimal</option>
-              <option>Binary</option>
+            <select id="round-format">
+              <option value="Decimal">Decimal</option>
+              <option value="Binary" selected>Binary</option>
             </select>
           </label>
+          
           <label class="field">
-            <span class="field-name">Target digits</span>
-            <input type="number" placeholder="e.g. 3" disabled />
+            <span class="field-name">Target Fractional Digits</span>
+            <input type="number" id="round-digits" placeholder="e.g., 2" min="0" />
           </label>
-          <button class="btn btn-primary" disabled>Round</button>
+          
+          <button class="btn btn-primary" id="round-btn">Calculate Rounding</button>
         </div>
-
+    
+        <!-- Output Card -->
         <div class="card output-card">
-          <h3 class="card-title">Output — all four methods</h3>
+          <h3 class="card-title">Computed Results</h3>
+          
           <div class="method-list">
             <div class="method-row">
               <span class="method-name">Chopping</span>
-              <div class="mono-box placeholder">—</div>
+              <div class="mono-box" id="out-chop">—</div>
             </div>
+            
             <div class="method-row">
               <span class="method-name">Round-up</span>
-              <div class="mono-box placeholder">—</div>
+              <div class="mono-box" id="out-up">—</div>
             </div>
+            
             <div class="method-row">
               <span class="method-name">Round-down</span>
-              <div class="mono-box placeholder">—</div>
+              <div class="mono-box" id="out-down">—</div>
             </div>
+            
             <div class="method-row">
               <span class="method-name">Round-to-nearest, ties-to-even</span>
-              <div class="mono-box placeholder">—</div>
+              <div class="mono-box" id="out-even">—</div>
             </div>
           </div>
+          
         </div>
       </div>
     </section>
@@ -215,6 +206,7 @@
     <p>Machine 4 - Decimal 32-bit Floating-Point Machine</p>
   </footer>
 
-  <script src="SPConversion.js"></script>
+  <script src="rounding.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
