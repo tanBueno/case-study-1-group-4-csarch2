@@ -20,7 +20,7 @@
   <nav class="task-nav" aria-label="Task selection">
     <button class="task-tab is-active" data-task="convert">
       <span class="tab-index">01</span>
-      <span class="tab-name">Decimal → IEEE 754</span>
+      <span class="tab-name">Decimal - IEEE 754</span>
     </button>
     <button class="task-tab" data-task="rounding">
       <span class="tab-index">02</span>
@@ -48,9 +48,9 @@
           <h3 class="card-title">Input</h3>
           <label class="field">
             <span class="field-name">Decimal number</span>
-            <input type="text" placeholder="e.g. -12.375" disabled />
+            <input type="text" id="input-convert-decimal"/>
           </label>
-          <button class="btn btn-primary" disabled>Convert</button>
+          <button id="btn-convert" class="btn btn-primary">Convert</button>
         </div>
 
         <!-- Output column -->
@@ -64,12 +64,12 @@
 
           <div class="output-row">
             <span class="output-label">Hexadecimal</span>
-            <div class="mono-box placeholder">0x-</div>
+             <div id="out-convert-hex" class="mono-box placeholder">0x-</div>
           </div>
 
           <div class="output-row">
             <span class="output-label">Special case flag</span>
-            <div class="mono-box placeholder">-</div>
+            <div id="out-convert-special" class="mono-box placeholder">-</div>
           </div>
         </div>
       </div>
@@ -189,7 +189,7 @@
           </div>
           <div class="output-row">
             <span class="output-label">Binary (spaced)</span>
-            <div class="mono-box placeholder">- sign - exponent - mantissa -</div>
+            <div id="out-convert-binary" class="mono-box placeholder">- sign - exponent - mantissa -</div>
           </div>
           <div class="output-row">
             <span class="output-label">Hexadecimal</span>
@@ -205,7 +205,8 @@
   <footer class="site-footer">
     <p>Machine 4 - Decimal 32-bit Floating-Point Machine</p>
   </footer>
-
+  
+  <script src="SPConversion.js"></script>
   <script src="rounding.js"></script>
   <script src="script.js"></script>
 </body>
