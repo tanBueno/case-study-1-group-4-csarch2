@@ -1,0 +1,214 @@
+body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #e6f3ff; /* Light blue background */
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+
+    /* --- HEADER & NAVIGATION --- */
+    .site-header, .register-strip, .task-nav, .site-footer {
+      max-width: 1000px;
+      margin: 0 auto 20px auto;
+      text-align: center;
+    }
+
+    .brand-title {
+      color: #2c3e50;
+    }
+
+    .task-nav {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .task-tab {
+      padding: 12px 24px;
+      border: 1px solid #ccc;
+      background: #ffffff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #555;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .task-tab:hover {
+      background: #f0f0f0;
+    }
+
+    .task-tab.is-active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+
+    /* --- PANEL & CARD LAYOUT --- */
+    .task-panel {
+      background: #fbfbfb;
+      max-width: 1000px;
+      margin: 0 auto 30px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .panel-header {
+      margin-bottom: 25px;
+      border-bottom: 2px solid #eaeaea;
+      padding-bottom: 15px;
+    }
+    
+    .panel-header h2 {
+      margin: 0 0 10px 0;
+      color: #2c3e50;
+    }
+    
+    .panel-desc {
+      color: #555;
+      margin: 0;
+    }
+    
+    .panel-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+    }
+    
+    .card {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 25px;
+      flex: 1;
+      min-width: 320px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    
+    .card-title {
+      margin-top: 0;
+      font-size: 1.25rem;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    /* --- FORM INPUTS --- */
+    .field {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 18px;
+    }
+    
+    .field-name {
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: #444;
+    }
+    
+    .field input, .field select {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      background-color: #fafafa;
+      transition: all 0.2s ease;
+    }
+    
+    .field input:focus, .field select:focus {
+      border-color: #007bff;
+      background-color: #fff;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+    }
+    
+    .field input:disabled, .field select:disabled {
+      background-color: #e9ecef;
+      color: #6c757d;
+      cursor: not-allowed;
+    }
+
+    /* --- BUTTONS --- */
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      font-size: 1.05rem;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: 600;
+      transition: background-color 0.2s ease;
+      margin-top: 10px;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+    
+    .btn-primary:disabled {
+      background-color: #a0c4ff;
+      cursor: not-allowed;
+    }
+
+    /* --- OUTPUT & RESULT BLOCKS --- */
+    .method-list, .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    
+    /* Shared styles for rows across all 3 tasks */
+    .method-row, .output-row, .step-item {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 5px solid #007bff; 
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 15px;
+    }
+    
+    .method-name, .output-label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6c757d;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .mono-box {
+      font-family: 'Consolas', 'Courier New', Courier, monospace;
+      font-size: 1.2rem;
+      color: #212529;
+      word-break: break-all;
+      min-height: 22px;
+    }
+    
+    .mono-box.placeholder {
+      color: #adb5bd;
+    }
+
+        /* --- TAB SWITCHING LOGIC --- */
+    .task-panel {
+    display: none;
+    }
+
+    .task-panel.is-active {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+    }

@@ -9,7 +9,7 @@
 </head>
 <body>
 
-  <!-- ============================= HEADER ============================= -->
+  <!-- ============================= HEADER ========================/===== -->
   <header class="site-header">
     <div class="brand">
       <span class="brand-tag">MACHINE&nbsp;04</span>
@@ -69,9 +69,9 @@
           <h3 class="card-title">Input</h3>
           <label class="field">
             <span class="field-name">Decimal number</span>
-            <input type="text" placeholder="e.g. -12.375" disabled />
+            <input type="text" id="input-convert-decimal"/>
           </label>
-          <button class="btn btn-primary" disabled>Convert</button>
+          <button id="btn-convert" class="btn btn-primary">Convert</button>
         </div>
 
         <!-- Output column -->
@@ -80,17 +80,17 @@
 
           <div class="output-row">
             <span class="output-label">Binary (spaced)</span>
-            <div class="mono-box placeholder">- sign - exponent - mantissa -</div>
+            <div id="out-convert-binary" class="mono-box placeholder">- sign - exponent - mantissa -</div>
           </div>
 
           <div class="output-row">
             <span class="output-label">Hexadecimal</span>
-            <div class="mono-box placeholder">0x-</div>
+            <div id="out-convert-hex" class="mono-box placeholder">0x-</div>
           </div>
 
           <div class="output-row">
             <span class="output-label">Special case flag</span>
-            <div class="mono-box placeholder">-</div>
+            <div id="out-convert-special" class="mono-box placeholder">-</div>
           </div>
         </div>
       </div>
@@ -215,6 +215,6 @@
     <p>Machine 4 - Decimal 32-bit Floating-Point Machine</p>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="SPConversion.js"></script>
 </body>
 </html>
