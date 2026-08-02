@@ -27,8 +27,8 @@ let specialCase = "None";
         specialCase = "-Infinity";
     } else if (parseFloat(inputDecimal) === 0) {
         let sign = inputDecimal.startsWith("-") ? "1" : "0";
-        binaryResult = `${sign} 01100101000 00000000000000000000`; // Exponent 101, Coeff 0
-        hexResult = sign === "1" ? "0xB2800000" : "0x32800000";
+        binaryResult = `${sign} 00000000000 00000000000000000000`; // Exponent 101, Coeff 0
+        hexResult = sign === "1" ? "0x80000000" : "0x00000000";
         specialCase = "Zero";
     } else {
 //conversion logic
