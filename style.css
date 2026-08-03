@@ -156,6 +156,25 @@ body {
       cursor: not-allowed;
     }
 
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      font-size: 1.05rem;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: 600;
+      transition: background-color 0.2s ease;
+      margin-top: 10px;
+    }
+
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+
+
     /* --- OUTPUT & RESULT BLOCKS --- */
     .method-list, .steps-list {
       display: flex;

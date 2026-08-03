@@ -14,6 +14,69 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+ // Clear Button for Conversion
+  const clearConvertBtn = document.getElementById("btn-clear-convert");
+  if (clearConvertBtn) {
+    clearConvertBtn.addEventListener("click", () => {
+      document.getElementById("input-convert-decimal").value = "";
+      
+      const outBin = document.getElementById("out-convert-binary");
+      const outHex = document.getElementById("out-convert-hex");
+      const outSpec = document.getElementById("out-convert-special");
+      
+      outBin.textContent = "----";
+      outHex.textContent = "0x-";
+      outSpec.textContent = "-";
+      
+      outBin.classList.add("placeholder");
+      outHex.classList.add("placeholder");
+      outSpec.classList.add("placeholder");
+    });
+  }
+
+  // Clear Button for Rounding
+  const clearRoundBtn = document.getElementById("btn-clear-round");
+  if (clearRoundBtn) {
+    clearRoundBtn.addEventListener("click", () => {
+      document.getElementById("round-val").value = "";
+      document.getElementById("round-digits").value = "";
+      document.getElementById("round-format").value = "Decimal"; 
+      
+      document.getElementById("out-chop").textContent = "—";
+      document.getElementById("out-up").textContent = "—";
+      document.getElementById("out-down").textContent = "—";
+      document.getElementById("out-even").textContent = "—";
+    });
+  }
+
+  // Clear Button for Arithmetic
+  const clearArithBtn = document.getElementById("btn-clear-arith");
+  if (clearArithBtn) {
+    clearArithBtn.addEventListener("click", () => {
+      document.getElementById("arith-operand-a").value = "";
+      document.getElementById("arith-operand-b").value = "";
+      document.getElementById("arith-error").textContent = "";
+      
+      document.getElementById("arith-operation").value = "sub";
+      document.getElementById("arith-rounding").value = "chop";
+      
+      document.getElementById("arith-steps").innerHTML = '<li class="step-item placeholder">Step details will appear here.</li>';
+      
+      const decEl = document.getElementById("arith-result-decimal");
+      const binEl = document.getElementById("arith-result-binary");
+      const hexEl = document.getElementById("arith-result-hex");
+      
+      decEl.textContent = "-";
+      binEl.textContent = "----";
+      hexEl.textContent = "0x";
+      
+      decEl.classList.add("placeholder");
+      binEl.classList.add("placeholder");
+      hexEl.classList.add("placeholder");
+    });
+  }
+
+
   // Arithmetic compute button
   const computeBtn = document.getElementById("arith-compute-btn");
   if (computeBtn) {
