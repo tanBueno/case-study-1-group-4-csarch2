@@ -1,902 +1,703 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
 
-  var tabs = document.querySelectorAll(".task-tab");
-  var panels = document.querySelectorAll(".task-panel");
+  // Tab navigation
+  const tabs = document.querySelectorAll(".task-tab");
+  const panels = document.querySelectorAll(".task-panel");
 
-  var tabIndex = 0;
-  while (tabIndex < tabs.length) {
-    attachTabHandler(tabs[tabIndex], tabs, panels);
-    tabIndex = tabIndex + 1;
-  }
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const targetTask = tab.dataset.task;
+      tabs.forEach((t) => t.classList.toggle("is-active", t === tab));
+      panels.forEach((panel) => {
+        panel.classList.toggle("is-active", panel.dataset.panel === targetTask);
+      });
+    });
+  });
 
-  var computeBtn = document.getElementById("arith-compute-btn");
+  // Arithmetic compute button
+  const computeBtn = document.getElementById("arith-compute-btn");
   if (computeBtn) {
-    computeBtn.addEventListener("click", handleComputeClick);
+    computeBtn.addEventListener("click", () => {
+      const operandA = document.getElementById("arith-operand-a").value;
+      const operandB = document.getElementById("arith-operand-b").value;
+      const operation = document.getElementById("arith-operation").value;
+      const roundingMethod = document.getElementById("arith-rounding").value;
+
+      const errorEl = document.getElementById("arith-error");
+      const stepsEl = document.getElementById("arith-steps");
+      const decEl = document.getElementById("arith-result-decimal");
+      const binEl = document.getElementById("arith-result-binary");
+      const hexEl = document.getElementById("arith-result-hex");
+
+      errorEl.textContent = "";
+      stepsEl.innerHTML = "";
+      decEl.innerHTML = "-";
+      binEl.textContent = "----";
+      hexEl.textContent = "0x";
+
+      const inputType = validateInputs(operandA, operandB);
+      if (inputType === "hex") {
+        const normalizedA = normalizeOperand(operandA);
+        const normalizedB = normalizeOperand(operandB);
+        if (!normalizedA || !normalizedB) {
+          stepsEl.innerHTML = "Invalid input";
+          return;
+        }
+        renderHexSteps(operandA, operandB, normalizedA, normalizedB, roundingMethod, operation);
+      } else if (inputType === "decimal") {
+        renderStepsDecimal(operandA, operandB, roundingMethod, operation);
+      } else {
+        stepsEl.innerHTML = "Invalid input";
+      }
+    });
   }
 });
 
-function attachTabHandler(tab, tabs, panels) {
-  tab.addEventListener("click", function () {
-    var targetTask = tab.dataset.task;
+// ==================== Helper functions ====================
 
-    var i = 0;
-    while (i < tabs.length) {
-      if (tabs[i] === tab) {
-        tabs[i].classList.add("is-active");
-      } else {
-        tabs[i].classList.remove("is-active");
-      }
-      i = i + 1;
+function isHexValue(value) {
+  if (!value.startsWith("0x")) return false;
+  const body = value.slice(2);
+  if (body.length === 0) return false;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i].toLowerCase();
+    if (!((ch >= "0" && ch <= "9") || (ch >= "a" && ch <= "f"))) return false;
+  }
+  return true;
+}
+
+function isDecimalValue(value) {
+  if (!value) return false;
+  const text = value.trim();
+  if (!text) return false;
+  let i = 0;
+  if (text[i] === "+" || text[i] === "-") i++;
+  let hasDigit = false;
+  let hasDot = false;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch >= "0" && ch <= "9") { hasDigit = true; i++; continue; }
+    if (ch === ".") { if (hasDot) return false; hasDot = true; i++; continue; }
+    break;
+  }
+  if (!hasDigit) return false;
+  if (i < text.length && text[i] === "e") {
+    i++;
+    if (i < text.length && (text[i] === "+" || text[i] === "-")) i++;
+    let expHasDigit = false;
+    while (i < text.length) {
+      const ch = text[i];
+      if (ch >= "0" && ch <= "9") { expHasDigit = true; i++; } else return false;
     }
-
-    var j = 0;
-    while (j < panels.length) {
-      if (panels[j].dataset.panel === targetTask) {
-        panels[j].classList.add("is-active");
-      } else {
-        panels[j].classList.remove("is-active");
-      }
-      j = j + 1;
-    }
-  });
-}
-
-function handleComputeClick() {
-  var operandA = document.getElementById("arith-operand-a").value;
-  var operandB = document.getElementById("arith-operand-b").value;
-  var operation = document.getElementById("arith-operation").value;
-  var roundingMethod = document.getElementById("arith-rounding").value;
-
-  var errorEl = document.getElementById("arith-error");
-  var stepsEl = document.getElementById("arith-steps");
-  var decEl = document.getElementById("arith-result-decimal");
-  var binEl = document.getElementById("arith-result-binary");
-  var hexEl = document.getElementById("arith-result-hex");
-
-  errorEl.textContent = "";
-  stepsEl.innerHTML = "";
-
-  try {
-    var steps = [];
-    var result;
-    if (operation === "sub") {
-      result = runSubtract(operandA, operandB, roundingMethod, steps);
-    } else {
-      result = runDivide(operandA, operandB, roundingMethod, steps);
-    }
-
-    var stepsHtml = "";
-    var k = 0;
-    while (k < steps.length) {
-      stepsHtml = stepsHtml + "<li><strong>" + steps[k].title + ":</strong><br>" + steps[k].detail + "</li>";
-      k = k + 1;
-    }
-    stepsEl.innerHTML = stepsHtml;
-
-    decEl.textContent = result.decimalText;
-    binEl.textContent = result.binaryText;
-    hexEl.textContent = result.hexText;
-    decEl.classList.remove("placeholder");
-    binEl.classList.remove("placeholder");
-    hexEl.classList.remove("placeholder");
-
-  } catch (err) {
-    errorEl.textContent = err.message;
-    stepsEl.innerHTML = "<li class=\"step-item placeholder\">Fix the input above and compute again.</li>";
+    return expHasDigit;
   }
+  return i === text.length;
 }
 
-// helper functions
-
-function powerOfTen(exponent) {
-  var result = 1n;
-  var count = 0;
-  while (count < exponent) {
-    result = result * 10n;
-    count = count + 1;
-  }
-  return result;
-}
-
-function bigIntToBinaryString(value, width) {
-  var bits = value.toString(2);
-  while (bits.length < width) {
-    bits = "0" + bits;
-  }
-  return bits;
-}
-
-function binaryStringToBigInt(bits) {
-  return BigInt("0b" + bits);
-}
-
-function isInfinity(parts) {
-  return parts.special === "inf";
-}
-
-function digitCountOf(coefficient) {
-  return coefficient.toString().length;
-}
-
-function scientificExponentOf(coefficient, exponent) {
-  return exponent + digitCountOf(coefficient) - 1;
-}
-
-// Formats a coefficient and exponent as normalized scientific notation, for example 1245n at exponent -1 becomes "1.245 x 10^2".
-
-function formatScientific(sign, coefficient, exponent) {
-  var digits = coefficient.toString();
-  var signText = sign ? "-" : "";
-  var sciExp = scientificExponentOf(coefficient, exponent);
-  var mantissa;
-  if (digits.length === 1) {
-    mantissa = digits;
-  } else {
-    mantissa = digits.charAt(0) + "." + digits.substring(1);
-  }
-  return signText + mantissa + " x 10^" + sciExp;
-}
-
-// Formats a plain magnitude value as a decimal string with no forced leading digit, reusing the same digit placement logic used for the final decimal output.
-
-function formatMagnitude(coefficient, localExponent) {
-  return decimalTextFromCoefficientExponent(0, coefficient, localExponent);
-}
-
-// Stage 1, decode input into sign, coefficient, exponent
-
-function detectInputType(raw) {
-  var text = raw.trim();
-  if (text === "") {
-    return "invalid";
-  }
-  if (/^(0x|0X)?[0-9a-fA-F]{8}$/.test(text)) {
-    return "hex";
-  }
-  var lower = text.toLowerCase();
-  if (lower === "nan" || lower === "inf" || lower === "+inf" || lower === "infinity" || lower === "+infinity" || lower === "-inf" || lower === "-infinity") {
-    return "decimal";
-  }
-  if (!isNaN(Number(text))) {
-    return "decimal";
-  }
+function validateInputs(operandA, operandB) {
+  const a = String(operandA || "").trim();
+  const b = String(operandB || "").trim();
+  if (isHexValue(a) || isHexValue(b)) return "hex";
+  if (isDecimalValue(a) && isDecimalValue(b)) return "decimal";
   return "invalid";
 }
 
-function decimalStringToParts(text) {
-  var trimmed = text.trim();
-  var lower = trimmed.toLowerCase();
-
-  if (lower === "nan") {
-    return { special: "nan", sign: 0 };
+function normalizeOperand(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  if (isHexValue(text)) {
+    const hexBody = text.slice(2);
+    return String(parseInt(hexBody, 16));
   }
-  if (lower === "inf" || lower === "+inf" || lower === "infinity" || lower === "+infinity") {
-    return { special: "inf", sign: 0 };
-  }
-  if (lower === "-inf" || lower === "-infinity") {
-    return { special: "inf", sign: 1 };
-  }
-
-  var num = Number(trimmed);
-  if (isNaN(num)) {
-    throw new Error("\"" + text + "\" is not a valid decimal number, 8 digit IEEE hex, or special value (inf, -inf, nan).");
-  }
-  if (num === 0) {
-    var zeroSign = trimmed.charAt(0) === "-" ? 1 : 0;
-    return { special: "zero", sign: zeroSign };
-  }
-
-  var sign = num < 0 ? 1 : 0;
-  var absNum = Math.abs(num);
-
-  var sciStr = absNum.toExponential();
-  var sciParts = sciStr.split("e");
-  var mantissaStr = sciParts[0];
-  var sciExp = parseInt(sciParts[1], 10);
-
-  var dotIndex = mantissaStr.indexOf(".");
-  var cStr;
-  var fractionDigitCount;
-  if (dotIndex === -1) {
-    cStr = mantissaStr;
-    fractionDigitCount = 0;
-  } else {
-    cStr = mantissaStr.replace(".", "");
-    fractionDigitCount = mantissaStr.length - dotIndex - 1;
-  }
-
-  var q = sciExp - fractionDigitCount;
-
-  cStr = cStr.replace(/^0+/, "");
-  if (cStr === "") {
-    cStr = "0";
-  }
-
-  if (cStr.length > 7) {
-    var diff = cStr.length - 7;
-    cStr = cStr.substring(0, 7);
-    q = q + diff;
-  }
-
-  var coefficient = BigInt(cStr);
-  return { special: null, sign: sign, coefficient: coefficient, exponent: q };
+  return isDecimalValue(text) ? text : null;
 }
 
-function hexStringToParts(hexStr) {
-  var clean = hexStr.trim().replace(/^0x/i, "");
-  var uint32 = parseInt(clean, 16);
-
-  var sign = 0;
-  var rest = uint32;
-  if (rest >= 2147483648) {
-    sign = 1;
-    rest = rest - 2147483648;
+function getNormalizedDecimal(value) {
+  const rawValue = String(value).trim();
+  if (!rawValue) return { sign: "", significand: "0", exponent: 0, special: true };
+  const sign = rawValue.startsWith("-") ? "-" : "";
+  const magnitude = rawValue.replace(/^[-+]/, "");
+  if (magnitude.toLowerCase() === "nan" || magnitude.toLowerCase() === "infinity") {
+    return { sign, significand: magnitude, exponent: 0, special: true };
   }
-
-  var restBits = rest.toString(2);
-  while (restBits.length < 31) {
-    restBits = "0" + restBits;
+  const numericValue = Number(magnitude);
+  if (!Number.isFinite(numericValue)) {
+    return { sign, significand: "0", exponent: 0, special: true };
   }
-
-  // The 31 non-sign bits split, in order, into the 5-bit combination
-  // field, the 6-bit exponent continuation field, and the 20-bit
-  // coefficient continuation field. These are contiguous, not
-  // interleaved.
-  var combination = restBits.substring(0, 5);
-  var exponentContinuation = restBits.substring(5, 11);
-  var coefficientContinuation = restBits.substring(11, 31);
-
-  var topFour = combination.substring(0, 4);
-  if (topFour === "1111") {
-    var fifthBit = combination.charAt(4);
-    if (fifthBit === "0") {
-      return { special: "inf", sign: sign };
-    } else {
-      return { special: "nan", sign: sign };
-    }
-  }
-
-  var topTwo = combination.substring(0, 2);
-  var exponentTopBits;
-  var msd;
-
-  if (topTwo === "11") {
-    exponentTopBits = combination.substring(2, 4);
-    var lastBit = combination.charAt(4);
-    msd = lastBit === "1" ? 9 : 8;
-  } else {
-    exponentTopBits = combination.substring(0, 2);
-    var lowThreeBits = combination.substring(2, 5);
-    msd = bcdBitsToDigit("0" + lowThreeBits);
-  }
-
-  var eBinFull = exponentTopBits + exponentContinuation;
-  var eField = parseInt(eBinFull, 2);
-  var exponent = eField - 101;
-
-  var declet1 = coefficientContinuation.substring(0, 10);
-  var declet2 = coefficientContinuation.substring(10, 20);
-  var digitsGroup1 = decodeDeclet(declet1);
-  var digitsGroup2 = decodeDeclet(declet2);
-
-  var fullDigits = msd.toString() + digitsGroup1[0].toString() + digitsGroup1[1].toString() + digitsGroup1[2].toString() + digitsGroup2[0].toString() + digitsGroup2[1].toString() + digitsGroup2[2].toString();
-  var coefficient = BigInt(fullDigits);
-
-  if (eField === 0 && coefficient === 0n) {
-    return { special: "zero", sign: sign };
-  }
-
-  return { special: null, sign: sign, coefficient: coefficient, exponent: exponent };
+  const normalized = numericValue.toExponential(15);
+  const [mantissa, exponentText] = normalized.split("e");
+  let significand = mantissa.replace(/^\-/, "");
+  significand = significand.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+  significand = significand === "" ? "0" : significand;
+  return { sign, significand, exponent: Number(exponentText), special: false };
 }
 
-// Densely Packed Decimal (DPD) helpers, used to pack the 6 trailing
-// coefficient digits into the 20-bit coefficient continuation field
-// (two 10-bit declets of 3 digits each) and to unpack them again.
-// These implement the standard Cowlishaw boolean equations, verified
-// against the lecture's own worked example (digits 123 encode to
-// 0010100011, digits 456 encode to 1001010110).
-
-function digitToBcdBits(digit) {
-  var bits = digit.toString(2);
-  while (bits.length < 4) {
-    bits = "0" + bits;
+function shiftDecimalPoint(significand, places) {
+  const value = String(significand).replace(/^\+/, "");
+  if (!value || value === "0") return "0";
+  const digitsOnly = value.replace(".", "");
+  const decimalPosition = value.includes(".") ? value.indexOf(".") : value.length;
+  const newDecimalPosition = decimalPosition - places;
+  if (newDecimalPosition <= 0) {
+    const zeroCount = Math.max(0, -newDecimalPosition);
+    return `0.${"0".repeat(zeroCount)}${digitsOnly}`;
   }
-  return bits;
-}
-
-function bcdBitsToDigit(bits) {
-  return parseInt(bits, 2);
-}
-
-function boolToBit(value) {
-  if (value) {
-    return "1";
+  if (newDecimalPosition >= digitsOnly.length) {
+    return digitsOnly + "0".repeat(newDecimalPosition - digitsOnly.length);
   }
-  return "0";
+  return digitsOnly.slice(0, newDecimalPosition) + "." + digitsOnly.slice(newDecimalPosition);
 }
 
-function encodeDeclet(digitA, digitB, digitC) {
-  var bitsA = digitToBcdBits(digitA);
-  var bitsB = digitToBcdBits(digitB);
-  var bitsC = digitToBcdBits(digitC);
-
-  var a = bitsA.charAt(0) === "1";
-  var b = bitsA.charAt(1) === "1";
-  var c = bitsA.charAt(2) === "1";
-  var d = bitsA.charAt(3) === "1";
-  var e = bitsB.charAt(0) === "1";
-  var f = bitsB.charAt(1) === "1";
-  var g = bitsB.charAt(2) === "1";
-  var h = bitsB.charAt(3) === "1";
-  var i = bitsC.charAt(0) === "1";
-  var j = bitsC.charAt(1) === "1";
-  var k = bitsC.charAt(2) === "1";
-  var m = bitsC.charAt(3) === "1";
-
-  var p = b || (a && j) || (a && f && i);
-  var q = c || (a && k) || (a && g && i);
-  var r = d;
-  var s = (f && (!a || !i)) || (!a && e && j) || (e && i);
-  var t = g || (!a && e && k) || (a && i);
-  var u = h;
-  var v = a || e || i;
-  var w = a || (e && i) || (!e && j);
-  var x = e || (a && i) || (!a && k);
-  var y = m;
-
-  return boolToBit(p) + boolToBit(q) + boolToBit(r) + boolToBit(s) + boolToBit(t) + boolToBit(u) + boolToBit(v) + boolToBit(w) + boolToBit(x) + boolToBit(y);
-}
-
-function decodeDeclet(declet) {
-  var p = declet.charAt(0) === "1";
-  var q = declet.charAt(1) === "1";
-  var r = declet.charAt(2) === "1";
-  var s = declet.charAt(3) === "1";
-  var t = declet.charAt(4) === "1";
-  var u = declet.charAt(5) === "1";
-  var v = declet.charAt(6) === "1";
-  var w = declet.charAt(7) === "1";
-  var x = declet.charAt(8) === "1";
-  var y = declet.charAt(9) === "1";
-
-  var a = (v && w) && (!s || t || !x);
-  var b = p && (!v || !w || (s && !t && x));
-  var c = q && (!v || !w || (s && !t && x));
-  var d = r;
-  var e = v && ((!w && x) || (!t && x) || (s && x));
-  var f = (s && (!v || !x)) || (p && !s && t && v && w && x);
-  var g = (t && (!v || !x)) || (q && !s && t && w);
-  var h = u;
-  var i = v && ((!w && !x) || (w && x && (s || t)));
-  var j = (!v && w) || (s && v && !w && x) || (p && w && (!x || (!s && !t)));
-  var k = (!v && x) || (t && !w && x) || (q && v && w && (!x || (!s && !t)));
-  var m = y;
-
-  var digitA = bcdBitsToDigit(boolToBit(a) + boolToBit(b) + boolToBit(c) + boolToBit(d));
-  var digitB = bcdBitsToDigit(boolToBit(e) + boolToBit(f) + boolToBit(g) + boolToBit(h));
-  var digitC = bcdBitsToDigit(boolToBit(i) + boolToBit(j) + boolToBit(k) + boolToBit(m));
-
-  return [digitA, digitB, digitC];
-}
-
-function decodeOperand(raw) {
-  var type = detectInputType(raw);
-  if (type === "invalid") {
-    throw new Error("\"" + raw + "\" is not a valid decimal number, 8 digit IEEE hex, or special value (inf, -inf, nan).");
-  }
-  var parts;
-  if (type === "hex") {
-    parts = hexStringToParts(raw);
-  } else {
-    parts = decimalStringToParts(raw);
-  }
-  parts.inputType = type;
-  return parts;
-}
-
-// Both operands must be entered in the same format, both decimal (this
-// also covers the inf, -inf, nan spellings) or both 8 digit IEEE hex.
-// Mixing formats (one decimal, one hex) is not allowed.
-
-function checkSameInputType(A, B) {
-  if (A.inputType !== B.inputType) {
-    throw new Error("Operand A is " + A.inputType + " and Operand B is " + B.inputType + ". Both operands must use the same input format, either both decimal or both 8 digit IEEE hex.");
-  }
-}
-
-// Builds a step describing how an 8 digit IEEE hex operand unpacks into
-// its 32 bit binary layout (sign, combination field, trailing digits),
-// and what that decodes to. Only called for operands actually entered
-// as hex, since decimal input never needs unpacking.
-
-function describeHexUnpack(label, rawInput, parts) {
-  var reEncoded = encodeFromParts(parts);
-  var meaning;
-  if (parts.special === "nan") {
-    meaning = "sign = " + parts.sign + ", special value = NaN";
-  } else if (parts.special === "inf") {
-    meaning = "sign = " + parts.sign + ", special value = Infinity";
-  } else if (parts.special === "zero") {
-    meaning = "sign = " + parts.sign + ", value = 0";
-  } else {
-    meaning = "sign = " + parts.sign + ", coefficient (decimal) = " + parts.coefficient.toString() + ", exponent = " + parts.exponent;
-  }
+function alignWithStrings(significandA, exponentA, significandB, exponentB, signA = "", signB = "") {
+  const sharedExp = Math.max(Number(exponentA), Number(exponentB));
+  const shiftA = sharedExp - Number(exponentA);
+  const shiftB = sharedExp - Number(exponentB);
   return {
-    title: "Unpack " + label + " from hex to binary",
-    detail: label + " entered as " + rawInput.trim() + "<br>Unpacked to binary: " + reEncoded.binaryText + " (sign | combination | trailing)<br>Decodes to: " + meaning
+    sharedExp,
+    sigA: `${signA}${shiftDecimalPoint(significandA, shiftA)}`.replace(/^\+/, ""),
+    sigB: `${signB}${shiftDecimalPoint(significandB, shiftB)}`.replace(/^\+/, "")
   };
 }
 
-function flipEffectiveSign(parts) {
-  var flippedSign = parts.sign === 0 ? 1 : 0;
-  if (parts.special === "zero") {
-    return { special: "zero", sign: flippedSign };
-  }
-  if (parts.special === "inf") {
-    return { special: "inf", sign: flippedSign };
-  }
-  if (parts.special === "nan") {
-    return { special: "nan", sign: flippedSign };
-  }
-  return { special: null, sign: flippedSign, coefficient: parts.coefficient, exponent: parts.exponent };
+function countSignificantDigits(significand) {
+  const text = String(significand).replace(/^[+-]/, "");
+  if (!text || text === "0" || text === "0.") return 0;
+  const withoutLeading = text.replace(/^0+/, "");
+  if (withoutLeading === "" || withoutLeading === ".") return 0;
+  return withoutLeading.replace(".", "").length;
 }
 
-function encodeFromParts(parts) {
-  if (parts.special === "nan") {
-    return encodeSpecial(parts.sign, "nan");
+function formatSignificandForDisplay(significand) {
+  const sign = significand.startsWith("-") ? "-" : "";
+  const body = String(significand).replace(/^[+-]/, "");
+  if (!body || body === "0" || body === "0.") {
+    return sign + "0";
   }
-  if (parts.special === "inf") {
-    return encodeSpecial(parts.sign, "inf");
+  const digitsOnly = body.replace(".", "");
+  const decimalIndex = body.includes(".") ? body.indexOf(".") : body.length;
+  if (decimalIndex === 0) return `${sign}0.${digitsOnly}`;
+  if (decimalIndex > 0) {
+    const wholePart = body.slice(0, decimalIndex);
+    const fracPart = body.slice(decimalIndex + 1);
+    if (wholePart === "0") {
+      const trimmed = fracPart.replace(/0+$/, "");
+      return `${sign}0.${trimmed}`;
+    }
   }
-  if (parts.special === "zero") {
-    return encodeDecimal32(parts.sign, 0n, -101);
-  }
-  return encodeDecimal32(parts.sign, parts.coefficient, parts.exponent);
+  return `${sign}${body}`;
 }
 
-// Stage 2, normalizeIEEEBin, gives the working (sign, significand, exponent)
-// triple used by the alignment and operate stages below.
-
-function normalizeIEEEBin(parts) {
-  return { sign: parts.sign, significand: parts.coefficient, exponent: parts.exponent };
-}
-
-// Stage 5 (rounding functions), defined early since alignOperands below
-// needs to call them when an aligned operand runs past 7 significant digits.
-
-function roundTruncate() {
-  return false;
-}
-
-function roundRoundUp(sign, hasRemainder) {
-  return sign === 0 && hasRemainder;
-}
-
-function roundRoundDown(sign, hasRemainder) {
-  return sign === 1 && hasRemainder;
-}
-
-function roundNearestEven(remainder, half, keptValue) {
-  if (remainder > half) {
-    return true;
+function roundSignificand(significand, method) {
+  const sign = significand.startsWith("-") ? "-" : "";
+  const body = String(significand).replace(/^[+-]/, "");
+  const digitCount = countSignificantDigits(body);
+  if (digitCount <= 7) {
+    return {
+      display: formatSignificandForDisplay(significand),
+      needsRounding: false,
+      digitCount
+    };
   }
-  if (remainder < half) {
-    return false;
+  const digits = body.replace(".", "");
+  const kept = digits.slice(0, 7);
+  const nextDigit = digits[7] || "0";
+  const remaining = digits.slice(8);
+  let roundedDigits = kept;
+  if (method === "chop") {
+    roundedDigits = kept;
+  } else if (method === "roundup") {
+    const tail = nextDigit + remaining;
+    if (tail !== "") {
+      roundedDigits = String(Number(kept) + 1).padStart(7, "0").slice(0, 7);
+    }
+  } else if (method === "rounddown") {
+    roundedDigits = kept;
+  } else if (method === "nearestEven") {
+    const tail = nextDigit + remaining;
+    const discard = Number(nextDigit);
+    const lastKept = Number(kept[6] || 0);
+    const tailHasMeaningfulValue = tail !== "" && tail !== "0";
+    if (discard > 5 || (discard === 5 && (tailHasMeaningfulValue || lastKept % 2 !== 0))) {
+      roundedDigits = String(Number(kept) + 1).padStart(7, "0").slice(0, 7);
+    }
   }
-  return (keptValue % 2n) === 1n;
+  let roundedDisplay = `${sign}${roundedDigits[0]}.${roundedDigits.slice(1)}`;
+  if (roundedDigits.length === 1) {
+    roundedDisplay = `${sign}${roundedDigits}`;
+  }
+  return {
+    display: roundedDisplay,
+    needsRounding: true,
+    digitCount
+  };
 }
 
-function applyRoundingMethod(mode, sign, remainder, half, keptValue) {
-  var hasRemainder = remainder !== 0n;
-  if (mode === "chop") {
-    return roundTruncate();
-  }
-  if (mode === "roundup") {
-    return roundRoundUp(sign, hasRemainder);
-  }
-  if (mode === "rounddown") {
-    return roundRoundDown(sign, hasRemainder);
-  }
-  return roundNearestEven(remainder, half, keptValue);
+function powerOfTen(exponent) {
+  let result = 1n;
+  for (let i = 0; i < exponent; i++) result *= 10n;
+  return result;
 }
 
-// Rounding, alignment, and final normalization all reuse the same
-// remainder-vs-half comparison logic (applyRoundingMethod above), applied
-// directly at each call site below rather than through extra wrapper
-// functions, since the two spots that need it (combining the smaller
-// operand's alignment shift, and normalizeResult) each shape the numbers
-// slightly differently.
+function convertToSinglePrecision(inputDecimal) {
+  const value = String(inputDecimal || "").trim().toLowerCase();
+  if (!value) return { binaryResult: "", hexResult: "0x", specialCase: "None" };
+  let specialCase = "None";
+  let signBit = "0";
+  let combinationField = "";
+  let exponentField = "";
+  let coefficientField1 = "";
+  let coefficientField2 = "";
 
-// Stage 3, alignment happens directly inside runSubtract below (it needs
-// access to both the scientific-exponent display and the working-precision
-// scale together, so keeping it inline avoids duplicating that math).
-
-// Stage 4a, subtractAligned, combines two exact integer coefficients that
-// already share the same working exponent.
-
-function subtractAligned(coefficientBig, coefficientSmall, signBig, signSmall) {
-  var rawValue;
-  var resultSign;
-  if (signBig === signSmall) {
-    rawValue = coefficientBig + coefficientSmall;
-    resultSign = signBig;
-  } else if (coefficientBig >= coefficientSmall) {
-    rawValue = coefficientBig - coefficientSmall;
-    resultSign = signBig;
+  if (value === "nan" || value === "qnan" || value === "quietnan") {
+    signBit = "0";
+    combinationField = "11111";
+    exponentField = "000000";
+    coefficientField1 = "1000000000";
+    coefficientField2 = "0000000000";
+    specialCase = "qNaN";
+  } else if (value === "infinity" || value === "+infinity" || value === "inf") {
+    signBit = "0";
+    combinationField = "11110";
+    exponentField = "000000";
+    coefficientField1 = "0000000000";
+    coefficientField2 = "0000000000";
+    specialCase = "+Infinity";
+  } else if (value === "-infinity" || value === "-inf") {
+    signBit = "1";
+    combinationField = "11110";
+    exponentField = "000000";
+    coefficientField1 = "0000000000";
+    coefficientField2 = "0000000000";
+    specialCase = "-Infinity";
+  } else if (value === "0" || value === "+0") {
+    signBit = "0";
+    combinationField = "00000";
+    exponentField = "000000";
+    coefficientField1 = "0000000000";
+    coefficientField2 = "0000000000";
+    specialCase = "+0";
+  } else if (value === "-0") {
+    signBit = "1";
+    combinationField = "00000";
+    exponentField = "000000";
+    coefficientField1 = "0000000000";
+    coefficientField2 = "0000000000";
+    specialCase = "-0";
   } else {
-    rawValue = coefficientSmall - coefficientBig;
-    resultSign = signSmall;
+    let parts = value.split("e");
+    let base = parts[0];
+    let exp = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+    if (base.startsWith("-")) {
+      signBit = "1";
+      base = base.replace("-", "");
+    } else {
+      signBit = "0";
+      base = base.replace("+", "");
+    }
+    const decIndex = base.indexOf(".");
+    let cStr = "";
+    if (decIndex === -1) {
+      cStr = base;
+    } else {
+      cStr = base.replace(".", "");
+      exp -= base.length - 1 - decIndex;
+    }
+    cStr = cStr.replace(/^0+/, "");
+    if (cStr === "") cStr = "0";
+    if (cStr.length < 7) {
+      cStr = cStr.padStart(7, "0");
+    } else if (cStr.length > 7) {
+      const diff = cStr.length - 7;
+      cStr = cStr.substring(0, 7);
+      exp += diff;
+    }
+    let E = exp + 101;
+    if (E < 6) {
+      specialCase = "Underflow (Denormalized)";
+      combinationField = "00000";
+      exponentField = "000000";
+      const shift = exp + 101;
+      let coeffBig = BigInt(cStr);
+      let adjustedCoeff = coeffBig * powerOfTen(-shift);
+      let adjStr = adjustedCoeff.toString();
+      adjStr = adjStr.padStart(7, "0");
+      const trailing = adjStr.substring(1, 7);
+      coefficientField1 = encodeDPD(trailing.substring(0, 3));
+      coefficientField2 = encodeDPD(trailing.substring(3, 6));
+    } else if (E > 191) {
+      specialCase = signBit === "0" ? "+Infinity" : "-Infinity";
+      combinationField = "11110";
+      exponentField = "000000";
+      coefficientField1 = "0000000000";
+      coefficientField2 = "0000000000";
+    } else {
+      const eBin = E.toString(2).padStart(8, "0");
+      const expMSBs = eBin.substring(0, 2);
+      exponentField = eBin.substring(2, 8);
+      const MSD = parseInt(cStr[0], 10);
+      const msdBin = MSD.toString(2).padStart(4, "0");
+      if (MSD < 8) {
+        combinationField = expMSBs + msdBin.substring(1, 4);
+      } else {
+        combinationField = "11" + expMSBs + msdBin[3];
+      }
+      coefficientField1 = encodeDPD(cStr.substring(1, 4));
+      coefficientField2 = encodeDPD(cStr.substring(4, 7));
+    }
   }
-  return { rawValue: rawValue, resultSign: resultSign };
+
+  const binaryResult = [signBit, combinationField, exponentField, coefficientField1, coefficientField2]
+    .filter(Boolean).join(" ");
+  const rawBinary = signBit + combinationField + exponentField + coefficientField1 + coefficientField2;
+  const hexNum = parseInt(rawBinary, 2).toString(16).toUpperCase();
+  const hexResult = "0x" + hexNum.padStart(8, "0");
+
+  return { binaryResult, hexResult, specialCase };
 }
 
-// Stage 4b, divideSignificands, exact long division using BigInt. The
-// numerator is scaled up by extra decimal digits so the quotient always
-// has enough digits to make a correct rounding decision later.
-
-function divideSignificands(workingA, workingB) {
-  var extraDigits = 10;
-  var scale = powerOfTen(extraDigits);
-  var scaledNumerator = workingA.significand * scale;
-  var quotient = scaledNumerator / workingB.significand;
-  var remainder = scaledNumerator - quotient * workingB.significand;
-  var resultSign = workingA.sign === workingB.sign ? 0 : 1;
-  var initialExponent = workingA.exponent - workingB.exponent - extraDigits;
-  return { quotient: quotient, remainder: remainder, resultSign: resultSign, initialExponent: initialExponent };
+function encodeDPD(digitStr) {
+  let d1 = parseInt(digitStr[0], 10).toString(2).padStart(4, '0');
+  let d2 = parseInt(digitStr[1], 10).toString(2).padStart(4, '0');
+  let d3 = parseInt(digitStr[2], 10).toString(2).padStart(4, '0');
+  let a = d1[0], b = d1[1], c = d1[2], d = d1[3];
+  let e = d2[0], f = d2[1], g = d2[2], h = d2[3];
+  let i = d3[0], j = d3[1], k = d3[2], m = d3[3];
+  let aei = a + e + i;
+  switch (aei) {
+    case "000": return b + c + d + f + g + h + "0" + j + k + m;
+    case "001": return b + c + d + f + g + h + "100" + m;
+    case "010": return b + c + d + j + k + h + "101" + m;
+    case "011": return b + c + d + "10" + h + "111" + m;
+    case "100": return j + k + d + f + g + h + "110" + m;
+    case "101": return f + g + d + "11" + h + "111" + m;
+    case "110": return j + k + d + "00" + h + "111" + m;
+    case "111": return "00" + d + "11" + h + "111" + m;
+    default: return "0000000000";
+  }
 }
 
-// Stage 6, normalizeResult, caps the coefficient at 7 digits, handles
-// overflow and underflow, and packs the final bit pattern.
+function performDecimalSubtraction(signA, signB, significandA, significandB, sharedExp) {
+  const aVal = Number(significandA);
+  const bVal = Number(significandB);
+  const aIsZero = aVal === 0;
+  const bIsZero = bVal === 0;
 
-function normalizeResult(sign, coefficient, exponent, mode, steps) {
-  var digits = digitCountOf(coefficient);
-  var finalCoefficient = coefficient;
-  var finalExponent = exponent;
-
-  if (digits > 7) {
-    var extraDigits = digits - 7;
-    var divisor = powerOfTen(extraDigits);
-    var half = divisor / 2n;
-    var kept = coefficient / divisor;
-    var remainder = coefficient - kept * divisor;
-    var inc = applyRoundingMethod(mode, sign, remainder, half, kept);
-    finalCoefficient = inc ? kept + 1n : kept;
-    finalExponent = exponent + extraDigits;
+  if (aIsZero && bIsZero) {
+    const resultSign = signA ? "-" : "";
+    return { display: resultSign + "0", exponent: sharedExp };
   }
 
-  // Rounding up the very last digit can itself carry the coefficient past
-  // 7 digits (for example 9999999 rounding up to 10000000), so check once
-  // more and shed exactly one more digit if that happened. This never
-  // needs its own rounding decision since the extra digit is always 0.
-  if (finalCoefficient >= 10000000n) {
-    finalCoefficient = finalCoefficient / 10n;
-    finalExponent = finalExponent + 1;
+  const result = aVal - bVal;
+  if (result === 0) {
+    const resultSign = result < 0 ? "-" : "";
+    return { display: resultSign + "0", exponent: sharedExp };
   }
-
-  if (finalCoefficient === 0n) {
-    steps.push({ title: "Step 5 (Normalize result)", detail: "R = 0" });
-    return encodeDecimal32(sign, 0n, -101);
-  }
-
-  var eField = finalExponent + 101;
-  if (eField > 191) {
-    steps.push({ title: "Overflow", detail: "Exponent " + finalExponent + " is out of range, result rounds to " + (sign ? "-" : "+") + "Infinity." });
-    return encodeSpecial(sign, "inf");
-  }
-  if (eField < 0) {
-    steps.push({ title: "Underflow", detail: "Exponent " + finalExponent + " is below the representable range, flushed to signed zero." });
-    return encodeDecimal32(sign, 0n, -101);
-  }
-
-  steps.push({ title: "Step 5 (Normalize result)", detail: "R = " + formatScientific(sign, finalCoefficient, finalExponent) + " = " + (sign ? "-" : "") + formatMagnitude(finalCoefficient, finalExponent) });
-  return encodeDecimal32(sign, finalCoefficient, finalExponent);
+  const sign = result < 0 ? "-" : "";
+  const magnitude = Math.abs(result);
+  return { display: `${sign}${magnitude}`, exponent: sharedExp };
 }
 
-// Packing and formatting, mirrors SPConversion.js's own bit layout exactly.
+function performDecimalDivision(signA, signB, significandA, exponentA, significandB, exponentB, roundingMethod) {
+  const aVal = Number(significandA);
+  const bVal = Number(significandB);
 
-function encodeDecimal32(sign, coefficient, exponent) {
-  if (coefficient === 0n) {
-    var zeroCombination = "00000";
-    var zeroExponentContinuation = "000000";
-    var zeroCoefficientContinuation = "0000000000 0000000000";
-    var zeroBinary = (sign ? "1" : "0") + " " + zeroCombination + " " + zeroExponentContinuation + " " + zeroCoefficientContinuation;
-    var zeroHex = binaryStringToHex(zeroBinary);
-    var zeroDecimal = sign ? "-0" : "0";
-    return { binaryText: zeroBinary, hexText: zeroHex, decimalText: zeroDecimal };
+  if (bVal === 0) {
+    if (aVal === 0) {
+      return { special: "nan", display: "NaN", exponent: 0 };
+    } else {
+      const sign = (signA !== signB) ? "-" : "";
+      return { special: "inf", display: sign + "Infinity", exponent: 0 };
+    }
   }
 
-  var eField = exponent + 101;
-  var eBin = eField.toString(2);
-  while (eBin.length < 8) {
-    eBin = "0" + eBin;
+  let expResult = exponentA - exponentB;
+  let sigResult = aVal / bVal;
+
+  let normalizedSig = sigResult;
+  let normExp = expResult;
+  while (normalizedSig >= 10) {
+    normalizedSig /= 10;
+    normExp += 1;
+  }
+  while (normalizedSig < 1 && normalizedSig !== 0) {
+    normalizedSig *= 10;
+    normExp -= 1;
   }
 
-  // The coefficient is at most 7 decimal digits. Pad on the left with
-  // zeros to exactly 7 digits, split off the most significant digit
-  // (stored inside the combination field), and pack the remaining 6
-  // digits into two 10-bit DPD declets for the coefficient continuation.
-  var digitString = coefficient.toString();
-  while (digitString.length < 7) {
-    digitString = "0" + digitString;
-  }
-  var msd = parseInt(digitString.charAt(0), 10);
-  var declet1 = encodeDeclet(parseInt(digitString.charAt(1), 10), parseInt(digitString.charAt(2), 10), parseInt(digitString.charAt(3), 10));
-  var declet2 = encodeDeclet(parseInt(digitString.charAt(4), 10), parseInt(digitString.charAt(5), 10), parseInt(digitString.charAt(6), 10));
-  var coefficientContinuation = declet1 + " " + declet2;
+  const sigStr = normalizedSig.toFixed(15);
+  const rounded = roundSignificand(sigStr, roundingMethod);
+  const sign = (signA !== signB) ? "-" : "";
 
-  var combination;
-  if (msd >= 8) {
-    var lastBit = msd === 9 ? "1" : "0";
-    combination = "11" + eBin.substring(0, 2) + lastBit;
+  return {
+    display: sign + rounded.display,
+    exponent: normExp,
+    needsRounding: rounded.needsRounding,
+    originalSig: sigResult,
+    originalExp: expResult,
+    normalizedSig: normalizedSig,
+    roundedSig: rounded
+  };
+}
+
+function normalizeForDecimalFloat(value, exponent) {
+  const sign = value.startsWith("-") ? "-" : "";
+  const body = String(value).replace(/^[+-]/, "");
+  if (!body || body === "0" || body === "0.") {
+    return { significand: sign + "0000000", exponent: 0 };
+  }
+  const [wholePart, fracPart = ""] = body.split(".");
+  const digitsOnly = `${wholePart}${fracPart}`;
+  const decimalPlaces = fracPart.length;
+  let normalizedDigits = digitsOnly;
+  if (normalizedDigits.length < 7) normalizedDigits = normalizedDigits.padStart(7, "0");
+  else if (normalizedDigits.length > 7) normalizedDigits = normalizedDigits.slice(0, 7);
+  const normalizedExponent = exponent - decimalPlaces;
+  return {
+    significand: `${sign}${normalizedDigits}`,
+    exponent: normalizedExponent
+  };
+}
+
+function renderHexSteps(operandA, operandB, decodedA, decodedB, roundingMethod, operation) {
+  const steps = [];
+  steps.push("<li><b>Step 0 (Hex to Decimal):</b><br>");
+  steps.push(`${operandA} = ${decodedA}<br>`);
+  steps.push(`${operandB} = ${decodedB}<br></li>`);
+  const decimalSteps = renderStepsDecimalContent(decodedA, decodedB, roundingMethod, operation);
+  document.getElementById("arith-steps").innerHTML = steps.join("") + decimalSteps;
+}
+
+function renderStepsDecimal(operandA, operandB, roundingMethod, operation) {
+  document.getElementById("arith-steps").innerHTML =
+    renderStepsDecimalContent(operandA, operandB, roundingMethod, operation);
+}
+
+function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation) {
+  const normA = getNormalizedDecimal(operandA);
+  const normB = getNormalizedDecimal(operandB);
+
+  const signA = normA.sign || "";
+  const signB = normB.sign || "";
+  const valA = normA.significand;
+  const valB = normB.significand;
+  const expA = normA.exponent;
+  const expB = normB.exponent;
+
+  const roundingLabel = {
+    chop: "truncate(chop)",
+    roundup: "round-up",
+    rounddown: "round-down",
+    nearestEven: "nearestEven"
+  }[roundingMethod] || roundingMethod;
+
+  let arithSteps = "";
+
+  arithSteps += "<li><b>Step 1 (Normalize):</b><br>";
+  arithSteps += `A = ${signA}${valA} x 10^${expA}<br>`;
+  arithSteps += `B = ${signB}${valB} x 10^${expB}<br></li>`;
+
+  if (operation === "div") {
+    //DIVISION
+    const aVal = Number(valA);
+    const bVal = Number(valB);
+
+    if (bVal === 0) {
+      if (aVal === 0) {
+        const conv = convertToSinglePrecision("nan");
+        arithSteps += `<li><b>Step 2 (Operation: divide):</b><br>0 ÷ 0 is undefined → NaN</li>`;
+        document.getElementById("arith-result-decimal").innerHTML = "NaN";
+        document.getElementById("arith-result-binary").textContent = conv.binaryResult;
+        document.getElementById("arith-result-hex").textContent = conv.hexResult;
+        return arithSteps;
+      } else {
+        const sign = (signA !== signB) ? "-" : "";
+        const displaySign = sign === "-" ? "-" : "+";
+        const conv = convertToSinglePrecision(sign + "inf");
+        arithSteps += `<li><b>Step 2 (Operation: divide):</b><br>Division by zero → ${displaySign}Infinity</li>`;
+        document.getElementById("arith-result-decimal").innerHTML = displaySign + "Infinity";
+        document.getElementById("arith-result-binary").textContent = conv.binaryResult;
+        document.getElementById("arith-result-hex").textContent = conv.hexResult;
+        return arithSteps;
+      }
+    }
+
+    let expResult = expA - expB;
+    arithSteps += `<li><b>Step 2 (Subtract exponents):</b><br>`;
+    arithSteps += `New exponent = ${expA} - ${expB} = ${expResult}<br></li>`;
+
+    let sigResult = aVal / bVal;
+    arithSteps += `<li><b>Step 3 (Divide significands):</b><br>`;
+    arithSteps += `${aVal} ÷ ${bVal} = ${sigResult}<br></li>`;
+
+    let normalizedSig = sigResult;
+    let normExp = expResult;
+    while (normalizedSig >= 10) {
+      normalizedSig /= 10;
+      normExp += 1;
+    }
+    while (normalizedSig < 1 && normalizedSig !== 0) {
+      normalizedSig *= 10;
+      normExp -= 1;
+    }
+    arithSteps += `<li><b>Step 4 (Normalize result):</b><br>`;
+    arithSteps += `${sigResult} x 10^${expResult} = ${normalizedSig} x 10^${normExp}<br></li>`;
+
+    const sigStr = normalizedSig.toFixed(15);
+    const rounded = roundSignificand(sigStr, roundingMethod);
+    const finalSign = (signA !== signB) ? "-" : "";
+    const finalDisplay = finalSign + rounded.display;
+    const finalExp = normExp;
+
+    if (rounded.needsRounding) {
+      arithSteps += `<li><b>Step 5 (Round to 7 digits):</b><br>`;
+      arithSteps += `${normalizedSig} = ${rounded.display} (rounded)<br></li>`;
+    } else {
+      arithSteps += `<li><b>Step 5 (Round to 7 digits):</b><br>`;
+      arithSteps += `${normalizedSig} = ${rounded.display} (no rounding needed)<br></li>`;
+    }
+
+    arithSteps += `<li><b>Step 6 (Determine sign):</b><br>`;
+    arithSteps += `Signs: A${signA ? "(-)" : "(+)"}, B${signB ? "(-)" : "(+)"} → result is ${finalSign ? "negative" : "positive"}<br>`;
+    arithSteps += `R = ${finalSign}${rounded.display} x 10^${finalExp}<br></li>`;
+
+    const normResult = normalizeForDecimalFloat(finalSign + rounded.display, finalExp);
+    arithSteps += `<li><b>Step 5 (Normalize and re-round result):</b><br>`;
+    arithSteps += `R = ${finalSign}${rounded.display} x 10^${finalExp}<br>`;
+    arithSteps += `R = ${normResult.significand} x 10^${normResult.exponent} (normalized to ddddddd x 10^e)<br></li>`;
+
+    let overflow = false;
+    let underflow = false;
+    if (finalExp > 90) overflow = true;
+    if (finalExp < -95) underflow = true;
+
+    if (overflow) {
+      arithSteps += `<li><b>Overflow detected:</b><br>`;
+      arithSteps += `The exponent ${finalExp} exceeds the maximum representable exponent (90).<br>`;
+      arithSteps += `Result rounds to ${finalSign ? "-" : "+"}Infinity.<br></li>`;
+    }
+
+    if (underflow) {
+      arithSteps += `<li><b>Underflow detected:</b><br>`;
+      arithSteps += `The exponent ${finalExp} is below the minimum representable exponent (-95).<br>`;
+      arithSteps += `Result is denormalized (subnormal).<br></li>`;
+    }
+
+    //Encoding
+    const resultObj = { display: finalSign + rounded.display, exponent: finalExp };
+    const finalScientific = `${resultObj.display}e${resultObj.exponent}`;
+    const conversionResult = convertToSinglePrecision(finalScientific);
+
+    let displayText = '';
+    if (conversionResult.specialCase === "+Infinity" || conversionResult.specialCase === "-Infinity") {
+      displayText = conversionResult.specialCase;
+    } else if (conversionResult.specialCase === "qNaN") {
+      displayText = "NaN";
+    } else if (overflow) {
+      displayText = finalSign ? "-Infinity" : "+Infinity";
+    } else {
+      displayText = `${resultObj.display} x 10^${resultObj.exponent}`;
+      if (conversionResult.specialCase.includes("Underflow") || underflow) {
+        displayText += " (Denormalized/Underflow)";
+      }
+    }
+    document.getElementById("arith-result-decimal").innerHTML = displayText;
+    document.getElementById("arith-result-binary").textContent = conversionResult.binaryResult;
+    document.getElementById("arith-result-hex").textContent = conversionResult.hexResult;
+
+    return arithSteps;
+
   } else {
-    var msdBits = digitToBcdBits(msd);
-    combination = eBin.substring(0, 2) + msdBits.substring(1);
-  }
-  var exponentContinuation = eBin.substring(2);
+    //SUBTRACTION
+    const aligned = alignWithStrings(valA, expA, valB, expB, signA, signB);
+    const roundedA = roundSignificand(aligned.sigA, roundingMethod);
+    const roundedB = roundSignificand(aligned.sigB, roundingMethod);
 
-  var binaryText = (sign ? "1" : "0") + " " + combination + " " + exponentContinuation + " " + coefficientContinuation;
-  var hexText = binaryStringToHex(binaryText);
-  var decimalText = decimalTextFromCoefficientExponent(sign, coefficient, exponent);
+    arithSteps += `<li><b>Step 2 (Align exponents to 10^${aligned.sharedExp}):</b><br>`;
+    arithSteps += `A = ${aligned.sigA} x 10^${aligned.sharedExp}<br>`;
+    arithSteps += `B = ${aligned.sigB} x 10^${aligned.sharedExp}<br></li>`;
 
-  return { binaryText: binaryText, hexText: hexText, decimalText: decimalText };
-}
+    const needsRounding = roundedA.needsRounding || roundedB.needsRounding;
+    const digitCountA = roundedA.digitCount;
+    const digitCountB = roundedB.digitCount;
+    const roundingMsg = needsRounding
+      ? `A has ${digitCountA} significant digit(s), B has ${digitCountB} significant digit(s), rounding needed.`
+      : `A already has ${digitCountA} significant digit(s), B already has ${digitCountB} significant digit(s), both within the 7 digit limit, so neither needs rounding yet.`;
 
-function encodeSpecial(sign, kind) {
-  var combination;
-  var decimalText;
-  if (kind === "inf") {
-    combination = "11110";
-    decimalText = sign ? "-Infinity" : "+Infinity";
-  } else {
-    combination = "11111";
-    decimalText = "NaN";
-  }
-  var binaryText = (sign ? "1" : "0") + " " + combination + " " + "000000" + " " + "0000000000 0000000000";
-  var hexText = binaryStringToHex(binaryText);
-  return { binaryText: binaryText, hexText: hexText, decimalText: decimalText };
-}
+    arithSteps += `<li><b>Step 3 (Rounding method: ${roundingLabel}):</b><br>`;
+    arithSteps += `${roundingMsg}<br>`;
+    arithSteps += `A = ${roundedA.display} x 10^${aligned.sharedExp}${roundedA.needsRounding ? " (rounded off)" : ""}<br>`;
+    arithSteps += `B = ${roundedB.display} x 10^${aligned.sharedExp}${roundedB.needsRounding ? " (rounded off)" : ""}<br></li>`;
 
-function binaryStringToHex(binaryText) {
-  var bitsOnly = binaryText.split(" ").join("");
-  var value = binaryStringToBigInt(bitsOnly);
-  var hex = value.toString(16).toUpperCase();
-  while (hex.length < 8) {
-    hex = "0" + hex;
-  }
-  return "0x" + hex;
-}
+    const sA = roundedA.display.startsWith("-") ? "-" : "";
+    const sB = roundedB.display.startsWith("-") ? "-" : "";
+    const vA = roundedA.display.replace(/^[+-]/, "");
+    const vB = roundedB.display.replace(/^[+-]/, "");
+    const opResult = performDecimalSubtraction(sA, sB, vA, vB, aligned.sharedExp);
 
-function decimalTextFromCoefficientExponent(sign, coefficient, exponent) {
-  var digits = coefficient.toString();
-  var signText = sign ? "-" : "";
+    arithSteps += `<li><b>Step 4 (Operation: subtract):</b><br>`;
+    arithSteps += `A = ${roundedA.display} x 10^${aligned.sharedExp}<br>`;
+    arithSteps += `B = ${roundedB.display} x 10^${aligned.sharedExp}<br>`;
+    arithSteps += `R = ${opResult.display} x 10^${opResult.exponent}<br></li>`;
 
-  if (exponent >= 0) {
-    var zerosToAdd = "";
-    var count = 0;
-    while (count < exponent) {
-      zerosToAdd = zerosToAdd + "0";
-      count = count + 1;
-    }
-    return signText + digits + zerosToAdd;
-  }
+    //Keep scientific exponent separate from integer exponent
+    let finalDisplay = opResult.display;
+    let scientificExp = opResult.exponent;
+    let finalDisplayForOutput = finalDisplay;
+    let finalExpForDisplay = scientificExp;
 
-  var fractionDigits = -exponent;
-  if (digits.length <= fractionDigits) {
-    var padding = "";
-    var needed = fractionDigits - digits.length;
-    var count2 = 0;
-    while (count2 < needed) {
-      padding = padding + "0";
-      count2 = count2 + 1;
-    }
-    return signText + "0." + padding + digits;
-  }
-
-  var splitPoint = digits.length - fractionDigits;
-  var wholePart = digits.substring(0, splitPoint);
-  var fracPart = digits.substring(splitPoint);
-  return signText + wholePart + "." + fracPart;
-}
-
-// runSubtract and runDivide. Each handles special cases
-// first (NaN, Infinity combinations, zero combinations), then falls
-// through to the generic 5 stage pipeline for finite nonzero operands.
-
-function runSubtract(rawA, rawB, mode, steps) {
-  var A = decodeOperand(rawA);
-  var B = decodeOperand(rawB);
-  checkSameInputType(A, B);
-
-  if (A.inputType === "hex") {
-    steps.push(describeHexUnpack("A", rawA, A));
-  }
-  if (B.inputType === "hex") {
-    steps.push(describeHexUnpack("B", rawB, B));
-  }
-
-  if (A.special === "nan" || B.special === "nan") {
-    steps.push({ title: "Special case", detail: "An operand is NaN, result is NaN." });
-    return encodeSpecial(0, "nan");
-  }
-
-  var Beff = flipEffectiveSign(B);
-
-  if (A.special === "inf" && Beff.special === "inf") {
-    if (A.sign === Beff.sign) {
-      steps.push({ title: "Special case", detail: "Infinity plus infinity of the same sign is Infinity." });
-      return encodeSpecial(A.sign, "inf");
-    }
-    steps.push({ title: "Special case", detail: "Infinity minus infinity is undefined, result is NaN." });
-    return encodeSpecial(0, "nan");
-  }
-  if (A.special === "inf") {
-    steps.push({ title: "Special case", detail: "A is Infinity, result is Infinity with A's sign." });
-    return encodeSpecial(A.sign, "inf");
-  }
-  if (Beff.special === "inf") {
-    steps.push({ title: "Special case", detail: "B is Infinity, result is Infinity with the opposite of B's sign." });
-    return encodeSpecial(Beff.sign, "inf");
-  }
-
-  if (A.special === "zero" && Beff.special === "zero") {
-    if (A.sign === Beff.sign) {
-      steps.push({ title: "Special case", detail: "Zero plus or minus zero of the same sign is zero." });
-      return encodeDecimal32(A.sign, 0n, -101);
-    }
-    var tieSign = mode === "rounddown" ? 1 : 0;
-    steps.push({ title: "Special case", detail: "Exact cancellation of equal magnitudes, result is zero." });
-    return encodeDecimal32(tieSign, 0n, -101);
-  }
-  if (A.special === "zero") {
-    steps.push({ title: "Special case", detail: "A is zero, result equals negative B." });
-    return encodeFromParts(Beff);
-  }
-  if (Beff.special === "zero") {
-    steps.push({ title: "Special case", detail: "B is zero, result equals A." });
-    return encodeFromParts(A);
-  }
-
-  var workingA = normalizeIEEEBin(A);
-  var workingBeff = normalizeIEEEBin(Beff);
-
-  steps.push({ title: "Step 1 (Normalize)", detail: "A = " + formatScientific(A.sign, workingA.significand, workingA.exponent) + "<br>B = " + formatScientific(Beff.sign, workingBeff.significand, workingBeff.exponent)});
-
-  var sciExpA = scientificExponentOf(workingA.significand, workingA.exponent);
-  var sciExpBeff = scientificExponentOf(workingBeff.significand, workingBeff.exponent);
-  var sharedSciExp = sciExpA >= sciExpBeff ? sciExpA : sciExpBeff;
-
-  var big;
-  var small;
-  var bigSign;
-  var smallSign;
-  if (sciExpA >= sciExpBeff) {
-    big = workingA;
-    small = workingBeff;
-    bigSign = A.sign;
-    smallSign = Beff.sign;
-  } else {
-    big = workingBeff;
-    small = workingA;
-    bigSign = Beff.sign;
-    smallSign = A.sign;
-  }
-
-  var bigLocalExponent = big.exponent - sharedSciExp;
-  var smallLocalExponent = small.exponent - sharedSciExp;
-  var alignedBigText = formatMagnitude(big.significand, bigLocalExponent);
-  var alignedSmallText = formatMagnitude(small.significand, smallLocalExponent);
-
-  steps.push({ title: "Step 2 (Align exponents to 10^" + sharedSciExp + ")", detail: "A = " + (bigSign ? "-" : "") + alignedBigText + " x 10^" + sharedSciExp + "<br>B = " + (smallSign ? "-" : "") + alignedSmallText + " x 10^" + sharedSciExp });
-
-  // Every valid decimal32 operand already has at most 7 significant
-  // digits (that is enforced back in decodeOperand), so there is nothing
-  // to round away here. Rounding only becomes necessary on the result of
-  // the operation, in Step 5 below. Confirm and show that plainly.
-  steps.push({ title: "Step 3 (Rounding method: " + mode + ")", detail: "A already has " + digitCountOf(big.significand) + " significant digit(s), B already has " + digitCountOf(small.significand) + " significant digit(s), both within the 7 digit limit, so neither needs rounding yet.<br>A = " + formatScientific(bigSign, big.significand, big.exponent) + "<br>B = " + formatScientific(smallSign, small.significand, small.exponent) });
-
-  // Combine at full exact precision: use whichever raw exponent is
-  // smaller as the common scale (scaling the other operand's coefficient
-  // up by an exact power of ten never loses a digit), so the result R is
-  // exact before Step 5 rounds it. This avoids double-rounding the result.
-  // Note this is independent of which operand was labeled "big" above,
-  // since that labeling was by scientific exponent (digit count and
-  // exponent combined) for the Step 1 to 3 display, not by raw exponent.
-  var commonExponent = workingA.exponent < workingBeff.exponent ? workingA.exponent : workingBeff.exponent;
-  var scaledACoefficient = workingA.significand * powerOfTen(workingA.exponent - commonExponent);
-  var scaledBeffCoefficient = workingBeff.significand * powerOfTen(workingBeff.exponent - commonExponent);
-  var combined = subtractAligned(scaledACoefficient, scaledBeffCoefficient, A.sign, Beff.sign);
-  var rText = formatMagnitude(combined.rawValue, commonExponent);
-  steps.push({ title: "Step 4 (Operation: subtract)", detail: "A = " + (A.sign ? "-" : "") + formatMagnitude(scaledACoefficient, commonExponent) + "<br>B = " + (Beff.sign ? "-" : "") + formatMagnitude(scaledBeffCoefficient, commonExponent) + "<br>R = " + (combined.resultSign ? "-" : "") + rText });
-
-  if (combined.rawValue === 0n) {
-    var zeroSign = mode === "rounddown" ? 1 : 0;
-    steps.push({ title: "Step 5 (Normalize result)", detail: "R = 0" });
-    return encodeDecimal32(zeroSign, 0n, -101);
-  }
-
-  return normalizeResult(combined.resultSign, combined.rawValue, commonExponent, mode, steps);
-}
-
-function runDivide(rawA, rawB, mode, steps) {
-  var A = decodeOperand(rawA);
-  var B = decodeOperand(rawB);
-  checkSameInputType(A, B);
-
-  if (A.inputType === "hex") {
-    steps.push(describeHexUnpack("A", rawA, A));
-  }
-  if (B.inputType === "hex") {
-    steps.push(describeHexUnpack("B", rawB, B));
-  }
-
-  var resultSign = A.sign === B.sign ? 0 : 1;
-
-  if (A.special === "nan" || B.special === "nan") {
-    steps.push({ title: "Special case", detail: "An operand is NaN, result is NaN." });
-    return encodeSpecial(0, "nan");
-  }
-  if ((A.special === "zero" && B.special === "zero") || (isInfinity(A) && isInfinity(B))) {
-    steps.push({ title: "Special case", detail: "Zero divided by zero, or infinity divided by infinity, is undefined, result is NaN." });
-    return encodeSpecial(0, "nan");
-  }
-  if (isInfinity(A)) {
-    steps.push({ title: "Special case", detail: "A is Infinity, B is finite, result is Infinity." });
-    return encodeSpecial(resultSign, "inf");
-  }
-  if (isInfinity(B)) {
-    steps.push({ title: "Special case", detail: "B is Infinity, A is finite, result is zero." });
-    return encodeDecimal32(resultSign, 0n, -101);
-  }
-  if (A.special === "zero") {
-    steps.push({ title: "Special case", detail: "A is zero, B is nonzero, result is zero." });
-    return encodeDecimal32(resultSign, 0n, -101);
-  }
-  if (B.special === "zero") {
-    steps.push({ title: "Special case", detail: "Division by zero, result is Infinity." });
-    return encodeSpecial(resultSign, "inf");
-  }
-
-  var workingA = normalizeIEEEBin(A);
-  var workingB = normalizeIEEEBin(B);
-
-  steps.push({ title: "Step 1 (Normalize)", detail: "A = " + formatScientific(A.sign, workingA.significand, workingA.exponent) + "<br>B = " + formatScientific(B.sign, workingB.significand, workingB.exponent) });
-
-  var sciExpA = scientificExponentOf(workingA.significand, workingA.exponent);
-  var sciExpB = scientificExponentOf(workingB.significand, workingB.exponent);
-  steps.push({ title: "Step 2 (Compute exponent difference)", detail: "Quotient exponent starts at " + sciExpA + " - " + sciExpB + " = " + (sciExpA - sciExpB) });
-
-  var divResult = divideSignificands(workingA, workingB);
-  var digitCount = digitCountOf(divResult.quotient);
-  var rawQuotientText = formatMagnitude(divResult.quotient, divResult.initialExponent);
-  steps.push({ title: "Step 3 (Operation: divide)", detail: "A = " + formatMagnitude(workingA.significand, workingA.exponent) + "<br>B = " + formatMagnitude(workingB.significand, workingB.exponent) + "<br>R (before rounding) = " + rawQuotientText });
-
-  var extraDigits = digitCount - 7;
-  var sig7;
-  var exp;
-
-  if (extraDigits > 0) {
-    var divisor = powerOfTen(extraDigits);
-    var half = divisor / 2n;
-    var kept = divResult.quotient / divisor;
-    var intRemainder = divResult.quotient - kept * divisor;
-    exp = divResult.initialExponent + extraDigits;
-
-    var effectiveRemainder = intRemainder;
-    if (intRemainder === half && divResult.remainder !== 0n) {
-      effectiveRemainder = half + 1n;
+    if (finalDisplay !== "0" && finalDisplay !== "-0") {
+      const roundedResult = roundSignificand(finalDisplay, roundingMethod);
+      const normResult = normalizeForDecimalFloat(roundedResult.display, scientificExp);
+      arithSteps += `<li><b>Step 5 (Normalize result):</b><br>`;
+      arithSteps += `R = ${roundedResult.display} x 10^${scientificExp}${roundedResult.needsRounding ? " (rounded off)" : ""}<br>`;
+      arithSteps += `R = ${normResult.significand} x 10^${normResult.exponent} (normalized to ddddddd x 10^e)<br></li>`;
+      finalDisplayForOutput = roundedResult.display;
+      finalExpForDisplay = scientificExp;
+    } else {
+      arithSteps += `<li><b>Step 5 (Normalize result):</b><br>`;
+      arithSteps += `R = ${finalDisplay} (zero)<br></li>`;
     }
 
-    var inc = applyRoundingMethod(mode, resultSign, effectiveRemainder, half, kept);
-    sig7 = kept;
-    if (inc) {
-      sig7 = sig7 + 1n;
+    let overflow = false;
+    let underflow = false;
+    if (scientificExp > 90) overflow = true;
+    if (scientificExp < -95) underflow = true;
+
+    if (overflow) {
+      arithSteps += `<li><b>Overflow detected:</b><br>`;
+      arithSteps += `The exponent ${scientificExp} exceeds the maximum representable exponent (90).<br>`;
+      const sign = finalDisplay.startsWith("-") ? "-" : "";
+      arithSteps += `Result rounds to ${sign ? "-" : "+"}Infinity.<br></li>`;
     }
-  } else {
-    sig7 = divResult.quotient;
-    exp = divResult.initialExponent;
+
+    if (underflow) {
+      arithSteps += `<li><b>Underflow detected:</b><br>`;
+      arithSteps += `The exponent ${scientificExp} is below the minimum representable exponent (-95).<br>`;
+      arithSteps += `Result is denormalized (subnormal).<br></li>`;
+    }
+
+    // Encoding
+    const finalScientific = `${finalDisplayForOutput}e${scientificExp}`;
+    const conversionResult = convertToSinglePrecision(finalScientific);
+
+    let displayText = '';
+    if (conversionResult.specialCase === "+Infinity" || conversionResult.specialCase === "-Infinity") {
+      displayText = conversionResult.specialCase;
+    } else if (conversionResult.specialCase === "qNaN") {
+      displayText = "NaN";
+    } else if (overflow) {
+      const sign = finalDisplay.startsWith("-") ? "-" : "";
+      displayText = sign ? "-Infinity" : "+Infinity";
+    } else {
+      displayText = `${finalDisplayForOutput} x 10^${scientificExp}`;
+      if (conversionResult.specialCase.includes("Underflow") || underflow) {
+        displayText += " (Denormalized/Underflow)";
+      }
+    }
+    document.getElementById("arith-result-decimal").innerHTML = displayText;
+    document.getElementById("arith-result-binary").textContent = conversionResult.binaryResult;
+    document.getElementById("arith-result-hex").textContent = conversionResult.hexResult;
+
+    return arithSteps;
   }
-
-  steps.push({ title: "Step 4 (Rounding method: " + mode + ")", detail: "R (before rounding) = " + rawQuotientText + "<br>R (rounded to 7 digits) = " + (resultSign ? "-" : "") + formatMagnitude(sig7, exp) });
-
-  return normalizeResult(resultSign, sig7, exp, mode, steps);
 }
