@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Target the elements using the specific IDs for Task 2
+    // Target the elements using the specific IDs
     const valueInput = document.getElementById("round-val");
     const formatSelect = document.getElementById("round-format");
     const targetDigitsInput = document.getElementById("round-digits");
@@ -52,11 +52,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isNaN(num)) return { chop: "Invalid", up: "Invalid", down: "Invalid", even: "Invalid" };
         
         const m = Math.pow(10, digits);
-        const chop = Math.trunc(num * m) / m;
-        const up = Math.ceil(num * m) / m;
-        const down = Math.floor(num * m) / m;
         
-        const scaled = Math.abs(num) * m;
+        // floating point math errors for accurate rounding
+        const safeNum = parseFloat(num.toFixed(10));
+        
+        const chop = Math.trunc(safeNum * m) / m;
+        const up = Math.ceil(safeNum * m) / m;
+        const down = Math.floor(safeNum * m) / m;
+        
+        const rawScaled = Math.abs(num) * m;
+        const scaled = parseFloat(rawScaled.toFixed(8)); 
         const trunc = Math.floor(scaled);
         const frac = scaled - trunc;
         
@@ -111,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return { chop: signedChop, up: upStr, down: downStr, even: evenStr };
     }
 
-    // Button Event Listener
     roundBtn.addEventListener("click", () => {
         const val = valueInput.value.trim();
         const format = formatSelect.value;
