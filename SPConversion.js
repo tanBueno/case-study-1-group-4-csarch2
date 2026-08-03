@@ -66,10 +66,8 @@ function handleConversion() {
         cStr = cStr.replace(/^0+/, ""); //strip leasing zero from the coef
         if (cStr === "") cStr = "0";
 
-        if (cStr.length < 7) { // if there are fewer than 7 digits add zero to the right
-            let diff = 7 - cStr.length;
-            cStr = cStr.padEnd(7, '0');
-            exp -= diff;
+        if (cStr.length < 7) {
+            cStr = cStr.padStart(7, '0');
         } else if (cStr.length > 7) {// if theres morethan 7 calculate the excess and add to the exponent
             let diff = cStr.length - 7;
             cStr = cStr.substring(0, 7);
@@ -91,19 +89,19 @@ function handleConversion() {
         
         let combination = "";
         if (MSD < 8) { 
-            combination = expMSBs + msdBin.substring(1, 4); // Format: abcde[cite: 1]
+            combination = expMSBs + msdBin.substring(1, 4);
         } else {       
-            combination = "11" + expMSBs + msdBin[3];       // Format: 11cde[cite: 1]
+            combination = "11" + expMSBs + msdBin[3];
         }
 
-        let group1 = cStr.substring(1, 4);// split the final 6 digits of the coef into 2 strngs with 3 digigts each
+        let group1 = cStr.substring(1, 4);
         let group2 = cStr.substring(4, 7);
-        let coefCont = encodeDPD(group1) + encodeDPD(group2);
 
+        let rawCoefCont = encodeDPD(group1) + encodeDPD(group2);
+        let visualCoefCont = encodeDPD(group1) + " " + encodeDPD(group2);
          //formatting result
-        binaryResult = signBit + " " + combination + " " + expCont + " " + coefCont;
-        
-        let rawBinary = signBit + combination + expCont + coefCont;
+        binaryResult = signBit + " " + combination + " " + expCont + " " + visualCoefCont;
+        let rawBinary = signBit + combination + expCont + rawCoefCont;
         let hexNum = parseInt(rawBinary, 2).toString(16).toUpperCase();
         hexResult = "0x" + hexNum.padStart(8, '0');
     }
