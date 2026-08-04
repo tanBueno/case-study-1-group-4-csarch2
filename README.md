@@ -5,27 +5,34 @@
 https://tanbueno.github.io/case-study-1-group-4-csarch2/
 
 ### Convert decimal to decimal-based single-precision
+This converts decimal numbers into their 32-bit IEEE 754 Decimal floating point representation. It supports decimal imputs, scientific notation, and special cases. The output is shown in binary and hexadecimal.
 ### Test Cases
 
 Whole Number Input
-![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/36a5dce3e3cdaba66ea92b4dbd094e969419f100/test%20cases%20screenshot%20for%20Single%20Precison/wholenum.jpeg)
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/wholenum.png)
 
 Positive Input
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/posinp.png)
 
 Negative Input
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/neginp.png)
 
 ### Special Cases
 
 Positive Infinity
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/posinf.png)
 
 Negative Infinity
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/neginf.png)
 
 Positive Zero
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/poszer.png)
 
 Negative Zero
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/negzer.png)
 
 Not a Numebr
-
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/8821dadbe5bc64c0604aa242e36c116f6f6a885e/test%20cases%20screenshot%20for%20Single%20Precison/nan.png)
 
 
 ### Arithmetic Operation Decimal 32-bit IEEE-754 floating-point single precision
