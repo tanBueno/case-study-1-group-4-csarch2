@@ -123,3 +123,6 @@ Normal Division with Rounding
 Beyond Emin -101 test
 ![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/bb920db1dcaec1d8c2eb215317cb42234fe5ed84/test%20cases%20arith%20op%20screenshots/15.png)
 
+Limit testing for positive infinity
+![image](https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/c5605844df582e91f3a1587bae9fc789d1230406/test%20cases%20arith%20op%20screenshots/17.png)
+
