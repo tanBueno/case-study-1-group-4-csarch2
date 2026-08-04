@@ -5,7 +5,7 @@ function handleConversion() {
         alert("Input a Decimal Number");
         return;
     }
-    
+
     let binaryResult = "";
     let hexResult = "";
     let specialCase = "None";
