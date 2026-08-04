@@ -74,7 +74,9 @@ function handleConversion() {
             exp += diff;
         }
 
-        let E = exp + 101; //exponent
+let E = exp + 101; //exponent
+        
+        // Handle Overflow (Value too large)
         if (E > 191) {
             if (signBit === "1") {
                 binaryResult = "1 11110 000000 00000000000000000000";
@@ -85,11 +87,14 @@ function handleConversion() {
                 hexResult = "0x78000000";
                 specialCase = "+Infinity (Overflow)";
             }
+            // Push results early and exit
             document.getElementById("out-convert-binary").innerText = binaryResult;
             document.getElementById("out-convert-hex").innerText = hexResult;
             document.getElementById("out-convert-special").innerText = specialCase;
             return;
         } 
+        
+        // Handle Underflow (Value too close to zero)
         else if (E < 0) {
             if (signBit === "1") {
                 binaryResult = "1 01000 100101 00000000000000000000";
@@ -100,6 +105,7 @@ function handleConversion() {
                 hexResult = "0x22A00000";
                 specialCase = "+Zero (Underflow)";
             }
+            // Push results early and exit
             document.getElementById("out-convert-binary").innerText = binaryResult;
             document.getElementById("out-convert-hex").innerText = hexResult;
             document.getElementById("out-convert-special").innerText = specialCase;
@@ -114,7 +120,7 @@ function handleConversion() {
         let msdBin = MSD.toString(2).padStart(4, '0');//convert back to 4 bin string
         
         let combination = "";
-        if (MSD < 😎 { 
+        if (MSD < 8) { 
             combination = expMSBs + msdBin.substring(1, 4);
         } else {       
             combination = "11" + expMSBs + msdBin[3];
