@@ -8,7 +8,8 @@ https://tanbueno.github.io/case-study-1-group-4-csarch2/
 ### Test Cases
 
 Whole Number Input
-![image}(https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/7fa1aa242f6141a135ecf609da683f9c06307fb0/test%20cases%20screenshot%20for%20Single%20Precison/wholenum.jpe)
+![image}(https://github.com/tanBueno/case-study-1-group-4-csarch2/blob/7fa1aa242f6141a135ecf609da683f9c06307fb0/test%20cases%20screenshot%20for%20Single%20Precison/wholenum.jpeg)
+
 Positive Input
 
 Negative Input
