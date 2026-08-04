@@ -4,6 +4,28 @@
 ## Website deploy link:
 https://tanbueno.github.io/case-study-1-group-4-csarch2/
 
+### Convert decimal to decimal-based single-precision
+### Test Cases
+
+Whole Number Input
+
+Positive Input
+
+Negative Input
+
+### Special Cases
+
+Positive Infinity
+
+Negative Infinity
+
+Positive Zero
+
+Negative Zero
+
+Not a Numebr
+
+
 
 ### Arithmetic Operation Decimal 32-bit IEEE-754 floating-point single precision
 
