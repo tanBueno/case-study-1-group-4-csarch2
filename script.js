@@ -1,6 +1,26 @@
+const DECIMAL_PLACES = 6;
+
+// round decimal using rounding.js
+function roundToDecimalPlaces(numStr, method, decimalPlaces = DECIMAL_PLACES) {
+    const rounded = roundDecimal(numStr, decimalPlaces);
+    const methodMap = {
+        'chop': 'chop',
+        'roundup': 'up',
+        'rounddown': 'down',
+        'nearestEven': 'even'
+    };
+    const key = methodMap[method] || 'even';
+    const result = rounded[key];
+    const original = parseFloat(numStr);
+    const roundedNum = parseFloat(result);
+    const isRounded = Math.abs(original - roundedNum) > 1e-12;
+    const digitCount = countSignificantDigits(numStr);
+    return { display: result, needsRounding: isRounded, digitCount: digitCount };
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
-  // Tab navigation
+  // tab navigation
   const tabs = document.querySelectorAll(".task-tab");
   const panels = document.querySelectorAll(".task-panel");
 
@@ -14,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
- // Clear Button for Conversion
+ // clear conversion fields
   const clearConvertBtn = document.getElementById("btn-clear-convert");
   if (clearConvertBtn) {
     clearConvertBtn.addEventListener("click", () => {
@@ -34,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Clear Button for Rounding
+  // clear rounding fields
   const clearRoundBtn = document.getElementById("btn-clear-round");
   if (clearRoundBtn) {
     clearRoundBtn.addEventListener("click", () => {
@@ -49,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Clear Button for Arithmetic
+  // clear arithmetic fields
   const clearArithBtn = document.getElementById("btn-clear-arith");
   if (clearArithBtn) {
     clearArithBtn.addEventListener("click", () => {
@@ -77,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  // Arithmetic compute button
+  // arithmetic compute
   const computeBtn = document.getElementById("arith-compute-btn");
   if (computeBtn) {
     computeBtn.addEventListener("click", () => {
@@ -98,6 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
       binEl.textContent = "----";
       hexEl.textContent = "0x";
 
+      // figure out if inputs are hex or decimal
       const inputType = validateInputs(operandA, operandB);
       if (inputType === "hex") {
         const normalizedA = normalizeOperand(operandA);
@@ -116,8 +137,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// ==================== Helper functions ====================
+// ==================== helpers ====================
 
+// check if a string is hex (starts with 0x)
 function isHexValue(value) {
   if (!value.startsWith("0x")) return false;
   const body = value.slice(2);
@@ -129,6 +151,7 @@ function isHexValue(value) {
   return true;
 }
 
+// check if a string is a valid decimal number (including scientific)
 function isDecimalValue(value) {
   if (!value) return false;
   const text = value.trim();
@@ -157,6 +180,7 @@ function isDecimalValue(value) {
   return i === text.length;
 }
 
+// determine if inputs are hex, decimal, or invalid
 function validateInputs(operandA, operandB) {
   const a = String(operandA || "").trim();
   const b = String(operandB || "").trim();
@@ -165,6 +189,7 @@ function validateInputs(operandA, operandB) {
   return "invalid";
 }
 
+// convert hex to decimal string, or keep decimal
 function normalizeOperand(value) {
   const text = String(value || "").trim();
   if (!text) return null;
@@ -175,6 +200,7 @@ function normalizeOperand(value) {
   return isDecimalValue(text) ? text : null;
 }
 
+// normalise a decimal string into {sign, significand, exponent}
 function getNormalizedDecimal(value) {
   const rawValue = String(value).trim();
   if (!rawValue) return { sign: "", significand: "0", exponent: 0, special: true };
@@ -222,6 +248,7 @@ function getNormalizedDecimal(value) {
   return { sign, significand, exponent: finalExponent, special: false };
 }
 
+// shift decimal point by a number of places (positive = right)
 function shiftDecimalPoint(significand, places) {
   const value = String(significand).replace(/^\+/, "");
   if (!value || value === "0") return "0";
@@ -238,6 +265,7 @@ function shiftDecimalPoint(significand, places) {
   return digitsOnly.slice(0, newDecimalPosition) + "." + digitsOnly.slice(newDecimalPosition);
 }
 
+// align two numbers to the same exponent
 function alignWithStrings(significandA, exponentA, significandB, exponentB, signA = "", signB = "") {
   const sharedExp = Math.max(Number(exponentA), Number(exponentB));
   const shiftA = sharedExp - Number(exponentA);
@@ -249,6 +277,7 @@ function alignWithStrings(significandA, exponentA, significandB, exponentB, sign
   };
 }
 
+// count significant digits
 function countSignificantDigits(significand) {
   const text = String(significand).replace(/^[+-]/, "");
   if (!text || text === "0" || text === "0.") return 0;
@@ -257,21 +286,20 @@ function countSignificantDigits(significand) {
   return withoutLeading.replace(".", "").length;
 }
 
+// format significand for display, strip trailing zeros
 function formatSignificandForDisplay(significand) {
   const sign = significand.startsWith("-") ? "-" : "";
   const body = String(significand).replace(/^[+-]/, "");
   if (!body || body === "0" || body === "0.") {
     return sign + "0";
   }
-  // If there is a decimal point, trim trailing zeros
   if (body.includes(".")) {
     let parts = body.split(".");
     let whole = parts[0];
     let frac = parts[1];
-    // Remove trailing zeros from fractional part
     frac = frac.replace(/0+$/, "");
     if (frac === "") {
-      return sign + whole; // no decimal point
+      return sign + whole;
     } else {
       return sign + whole + "." + frac;
     }
@@ -280,59 +308,14 @@ function formatSignificandForDisplay(significand) {
   }
 }
 
-function roundSignificand(significand, method) {
-  const sign = significand.startsWith("-") ? "-" : "";
-  const body = String(significand).replace(/^[+-]/, "");
-  const digitCount = countSignificantDigits(body);
-  if (digitCount <= 7) {
-    return {
-      display: formatSignificandForDisplay(significand),
-      needsRounding: false,
-      digitCount
-    };
-  }
-  const digits = body.replace(".", "");
-  const kept = digits.slice(0, 7);
-  const nextDigit = digits[7] || "0";
-  const remaining = digits.slice(8);
-  let roundedDigits = kept;
-  if (method === "chop") {
-    roundedDigits = kept;
-  } else if (method === "roundup") {
-    const tail = nextDigit + remaining;
-    if (tail !== "") {
-      roundedDigits = String(Number(kept) + 1).padStart(7, "0").slice(0, 7);
-    }
-  } else if (method === "rounddown") {
-    roundedDigits = kept;
-  } else if (method === "nearestEven") {
-    const tail = nextDigit + remaining;
-    const discard = Number(nextDigit);
-    const lastKept = Number(kept[6] || 0);
-    const tailHasMeaningfulValue = tail !== "" && tail !== "0";
-    if (discard > 5 || (discard === 5 && (tailHasMeaningfulValue || lastKept % 2 !== 0))) {
-      roundedDigits = String(Number(kept) + 1).padStart(7, "0").slice(0, 7);
-    }
-  }
-  // Construct the rounded number with decimal point after first digit
-  let roundedDisplay = `${sign}${roundedDigits[0]}.${roundedDigits.slice(1)}`;
-  if (roundedDigits.length === 1) {
-    roundedDisplay = `${sign}${roundedDigits}`;
-  }
-  // Apply the formatting to strip trailing zeros
-  return {
-    display: formatSignificandForDisplay(roundedDisplay),
-    needsRounding: true,
-    digitCount
-  };
-}
-
+// compute 10^exponent
 function powerOfTen(exponent) {
   let result = 1n;
   for (let i = 0; i < exponent; i++) result *= 10n;
   return result;
 }
 
+// convert decimal string to ieee 754 single-precision binary and hex
 function convertToSinglePrecision(inputDecimal) {
   const value = String(inputDecimal || "").trim().toLowerCase();
   if (!value) return { binaryResult: "", hexResult: "0x", specialCase: "None" };
@@ -343,7 +326,7 @@ function convertToSinglePrecision(inputDecimal) {
   let coefficientField1 = "";
   let coefficientField2 = "";
 
-  // ---- Special value handling ----
+  // special values
   if (value === "nan" || value === "qnan" || value === "quietnan") {
     signBit = "0";
     combinationField = "11111";
@@ -373,7 +356,7 @@ function convertToSinglePrecision(inputDecimal) {
     coefficientField2 = "0000000000";
     specialCase = value.startsWith("-") ? "-0" : "+0";
   } else {
-    // ---- Parse scientific notation ----
+    // parse scientific notation
     let parts = value.split("e");
     let base = parts[0];
     let exp = parts.length > 1 ? parseInt(parts[1], 10) : 0;
@@ -398,7 +381,7 @@ function convertToSinglePrecision(inputDecimal) {
     cStr = cStr.replace(/^0+/, "");
     if (cStr === "") cStr = "0";
     
-    // If coefficient is zero, return zero encoding
+    // zero special case
     if (cStr === "0" || parseFloat(cStr) === 0) {
       combinationField = "00000";
       exponentField = "000000";
@@ -406,7 +389,7 @@ function convertToSinglePrecision(inputDecimal) {
       coefficientField2 = "0000000000";
       specialCase = signBit === "0" ? "+0" : "-0";
     } else {
-      // Ensure 7-digit coefficient
+      // ensure 7-digit coefficient
       if (cStr.length < 7) {
         cStr = cStr.padStart(7, "0");
       } else if (cStr.length > 7) {
@@ -415,8 +398,10 @@ function convertToSinglePrecision(inputDecimal) {
         exp += diff;
       }
       
-      let E = exp + 101;
+      // bias for decimal32
+      let E = exp + 101; 
       
+      // underflow/overflow checks
       if (E < 0) {
         specialCase = signBit === "0" ? "+0 (Underflow)" : "-0 (Underflow)";
         combinationField = "00000";
@@ -424,14 +409,13 @@ function convertToSinglePrecision(inputDecimal) {
         coefficientField1 = "0000000000";
         coefficientField2 = "0000000000";
       } else if (E > 191) {
-        // Overflow = Infinity
         specialCase = signBit === "0" ? "+Infinity" : "-Infinity";
         combinationField = "11110";
         exponentField = "000000";
         coefficientField1 = "0000000000";
         coefficientField2 = "0000000000";
       } else {
-        // Normalized
+        // normal encoding
         const eBin = E.toString(2).padStart(8, "0");
         const expMSBs = eBin.substring(0, 2);
         exponentField = eBin.substring(2, 8);
@@ -457,6 +441,7 @@ function convertToSinglePrecision(inputDecimal) {
   return { binaryResult, hexResult, specialCase };
 }
 
+// encode 3 decimal digits into 10-bit dpd
 function encodeDPD(digitStr) {
   let d1 = parseInt(digitStr[0], 10).toString(2).padStart(4, '0');
   let d2 = parseInt(digitStr[1], 10).toString(2).padStart(4, '0');
@@ -478,12 +463,14 @@ function encodeDPD(digitStr) {
   }
 }
 
+// perform decimal subtraction with sign handling
 function performDecimalSubtraction(signA, signB, significandA, significandB, sharedExp) {
   const aVal = Number(significandA);
   const bVal = Number(significandB);
   const aIsZero = aVal === 0;
   const bIsZero = bVal === 0;
 
+  // both zero: sign follows a (preserves -0)
   if (aIsZero && bIsZero) {
     const resultSign = signA ? "-" : "";
     return { display: resultSign + "0", exponent: sharedExp };
@@ -491,6 +478,7 @@ function performDecimalSubtraction(signA, signB, significandA, significandB, sha
 
   const result = aVal - bVal;
   if (result === 0) {
+    // exact zero: sign from result (negative if negative)
     const resultSign = result < 0 ? "-" : "";
     return { display: resultSign + "0", exponent: sharedExp };
   }
@@ -499,12 +487,12 @@ function performDecimalSubtraction(signA, signB, significandA, significandB, sha
   return { display: `${sign}${magnitude}`, exponent: sharedExp };
 }
 
+// perform decimal division with sign handling and rounding
 function performDecimalDivision(signA, signB, significandA, exponentA, significandB, exponentB, roundingMethod) {
-  // This function is now called with rounded significands from the caller.
-  // We'll keep it as is.
   const aVal = Number(significandA);
   const bVal = Number(significandB);
 
+  // division by zero
   if (bVal === 0) {
     if (aVal === 0) {
       return { special: "nan", display: "NaN", exponent: 0 };
@@ -517,6 +505,7 @@ function performDecimalDivision(signA, signB, significandA, exponentA, significa
   let expResult = exponentA - exponentB;
   let sigResult = aVal / bVal;
 
+  // normalise to [1,10)
   let normalizedSig = sigResult;
   let normExp = expResult;
   while (normalizedSig >= 10) {
@@ -529,7 +518,7 @@ function performDecimalDivision(signA, signB, significandA, exponentA, significa
   }
 
   const sigStr = normalizedSig.toFixed(15);
-  const rounded = roundSignificand(sigStr, roundingMethod);
+  const rounded = roundToDecimalPlaces(sigStr, roundingMethod, DECIMAL_PLACES);
   const sign = (signA !== signB) ? "-" : "";
 
   return {
@@ -543,6 +532,7 @@ function performDecimalDivision(signA, signB, significandA, exponentA, significa
   };
 }
 
+// normalise a decimal float to 7-digit coefficient form (for display)
 function normalizeForDecimalFloat(value, exponent) {
   const sign = value.startsWith("-") ? "-" : "";
   const body = String(value).replace(/^[+-]/, "");
@@ -562,6 +552,7 @@ function normalizeForDecimalFloat(value, exponent) {
   };
 }
 
+// render steps for hex inputs
 function renderHexSteps(operandA, operandB, decodedA, decodedB, roundingMethod, operation) {
   const steps = [];
   steps.push("<li><b>Step 0 (Hex to Decimal):</b><br>");
@@ -571,11 +562,13 @@ function renderHexSteps(operandA, operandB, decodedA, decodedB, roundingMethod, 
   document.getElementById("arith-steps").innerHTML = steps.join("") + decimalSteps;
 }
 
+// render steps for decimal inputs (entry point)
 function renderStepsDecimal(operandA, operandB, roundingMethod, operation) {
   document.getElementById("arith-steps").innerHTML =
     renderStepsDecimalContent(operandA, operandB, roundingMethod, operation);
 }
 
+// core rendering for decimal steps (subtraction or division)
 function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation) {
   const normA = getNormalizedDecimal(operandA);
   const normB = getNormalizedDecimal(operandB);
@@ -596,20 +589,21 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
 
   let arithSteps = "";
 
+  // step 1: normalise
   arithSteps += "<li><b>Step 1 (Normalize):</b><br>";
   arithSteps += `A = ${signA}${valA} x 10^${expA}<br>`;
   arithSteps += `B = ${signB}${valB} x 10^${expB}<br></li>`;
 
   if (operation === "div") {
-    // DIVISION
-    // Step 2: Subtract exponents
+    // ----- division -----
+    // step 2: subtract exponents
     let expResult = expA - expB;
     arithSteps += `<li><b>Step 2 (Subtract exponents):</b><br>`;
     arithSteps += `New exponent = ${expA} - ${expB} = ${expResult}<br></li>`;
 
-    // Step 2.1: Round off the significands to 7 significant digits
-    const roundedA = roundSignificand(signA + valA, roundingMethod);
-    const roundedB = roundSignificand(signB + valB, roundingMethod);
+    // step 2.1: round off operands
+    const roundedA = roundToDecimalPlaces(signA + valA, roundingMethod);
+    const roundedB = roundToDecimalPlaces(signB + valB, roundingMethod);
     const roundedValA = roundedA.display;
     const roundedValB = roundedB.display;
 
@@ -617,13 +611,12 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
     arithSteps += `A = ${roundedValA} x 10^${expResult}<br>`;
     arithSteps += `B = ${roundedValB} x 10^${expResult}<br></li>`;
 
-    // Extract signs and values for division
     const signA_rounded = roundedValA.startsWith("-") ? "-" : "";
     const signB_rounded = roundedValB.startsWith("-") ? "-" : "";
     const valA_rounded = roundedValA.replace(/^[+-]/, "");
     const valB_rounded = roundedValB.replace(/^[+-]/, "");
 
-    // Check division by zero using rounded B
+    // division by zero
     const bVal = Number(valB_rounded);
     if (bVal === 0) {
       if (Number(valA_rounded) === 0) {
@@ -645,12 +638,12 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
       }
     }
 
-    // Step 3: Divide significands
+    // step 3: divide significands
     let sigResult = Number(valA_rounded) / Number(valB_rounded);
     arithSteps += `<li><b>Step 3 (Divide significands):</b><br>`;
     arithSteps += `${valA_rounded} ÷ ${valB_rounded} = ${sigResult}<br></li>`;
 
-    // Step 4: Normalize result
+    // step 4: normalise result
     let normalizedSig = sigResult;
     let normExp = expResult;
     while (normalizedSig >= 10) {
@@ -664,27 +657,27 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
     arithSteps += `<li><b>Step 4 (Normalize result):</b><br>`;
     arithSteps += `${sigResult} x 10^${expResult} = ${normalizedSig} x 10^${normExp}<br></li>`;
 
-    // Step 5: Round to 7 digits
+    // step 5: round to fixed decimal places
     const sigStr = normalizedSig.toFixed(15);
-    const rounded = roundSignificand(sigStr, roundingMethod);
+    const rounded = roundToDecimalPlaces(sigStr, roundingMethod);
     const finalSign = (signA_rounded !== signB_rounded) ? "-" : "";
     const finalDisplay = finalSign + rounded.display;
     const finalExp = normExp;
 
     if (rounded.needsRounding) {
-      arithSteps += `<li><b>Step 5 (Round to 7 digits):</b><br>`;
+      arithSteps += `<li><b>Step 5 (Round to ${DECIMAL_PLACES} decimal places):</b><br>`;
       arithSteps += `${normalizedSig} = ${rounded.display} (rounded)<br></li>`;
     } else {
-      arithSteps += `<li><b>Step 5 (Round to 7 digits):</b><br>`;
+      arithSteps += `<li><b>Step 5 (Round to ${DECIMAL_PLACES} decimal places):</b><br>`;
       arithSteps += `${normalizedSig} = ${rounded.display} (no rounding needed)<br></li>`;
     }
 
-    // Step 6: Determine sign
+    // step 6: determine sign
     arithSteps += `<li><b>Step 6 (Determine sign):</b><br>`;
     arithSteps += `Signs: A${signA_rounded ? "(-)" : "(+)"}, B${signB_rounded ? "(-)" : "(+)"} = result is ${finalSign ? "negative" : "positive"}<br>`;
     arithSteps += `R = ${finalSign}${rounded.display} x 10^${finalExp}<br></li>`;
 
-    // Final normalization to 7-digit coefficient form
+    // step 7: normalise to 7-digit coefficient form
     const normResult = normalizeForDecimalFloat(finalSign + rounded.display, finalExp);
     arithSteps += `<li><b>Step 5 (Normalize and re-round result):</b><br>`;
     arithSteps += `R = ${finalSign}${rounded.display} x 10^${finalExp}<br>`;
@@ -725,27 +718,30 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
     return arithSteps;
 
   } else {
-    // SUBTRACTION
+    // subtraction
+    // step 2: align exponents
     const aligned = alignWithStrings(valA, expA, valB, expB, signA, signB);
-    const roundedA = roundSignificand(aligned.sigA, roundingMethod);
-    const roundedB = roundSignificand(aligned.sigB, roundingMethod);
+    const roundedA = roundToDecimalPlaces(aligned.sigA, roundingMethod);
+    const roundedB = roundToDecimalPlaces(aligned.sigB, roundingMethod);
 
     arithSteps += `<li><b>Step 2 (Align exponents to 10^${aligned.sharedExp}):</b><br>`;
     arithSteps += `A = ${aligned.sigA} x 10^${aligned.sharedExp}<br>`;
     arithSteps += `B = ${aligned.sigB} x 10^${aligned.sharedExp}<br></li>`;
 
+    // step 3: round based on chosen method
     const needsRounding = roundedA.needsRounding || roundedB.needsRounding;
     const digitCountA = roundedA.digitCount;
     const digitCountB = roundedB.digitCount;
     const roundingMsg = needsRounding
       ? `A has ${digitCountA} significant digit(s), B has ${digitCountB} significant digit(s), rounding needed.`
-      : `A already has ${digitCountA} significant digit(s), B already has ${digitCountB} significant digit(s), both within the 7 digit limit, so neither needs rounding yet.`;
+      : `A already has ${digitCountA} significant digit(s), B already has ${digitCountB} significant digit(s), both within the ${DECIMAL_PLACES} decimal place limit, so neither needs rounding yet.`;
 
     arithSteps += `<li><b>Step 3 (Rounding method: ${roundingLabel}):</b><br>`;
     arithSteps += `${roundingMsg}<br>`;
     arithSteps += `A = ${roundedA.display} x 10^${aligned.sharedExp}${roundedA.needsRounding ? " (rounded off)" : ""}<br>`;
     arithSteps += `B = ${roundedB.display} x 10^${aligned.sharedExp}${roundedB.needsRounding ? " (rounded off)" : ""}<br></li>`;
 
+    // step 4: perform subtraction
     const sA = roundedA.display.startsWith("-") ? "-" : "";
     const sB = roundedB.display.startsWith("-") ? "-" : "";
     const vA = roundedA.display.replace(/^[+-]/, "");
@@ -757,14 +753,14 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
     arithSteps += `B = ${roundedB.display} x 10^${aligned.sharedExp}<br>`;
     arithSteps += `R = ${opResult.display} x 10^${opResult.exponent}<br></li>`;
 
-    // Keep scientific exponent separate from integer exponent
+    // step 5: normalise result
     let finalDisplay = opResult.display;
     let scientificExp = opResult.exponent;
     let finalDisplayForOutput = finalDisplay;
     let finalExpForDisplay = scientificExp;
 
     if (finalDisplay !== "0" && finalDisplay !== "-0") {
-      const roundedResult = roundSignificand(finalDisplay, roundingMethod);
+      const roundedResult = roundToDecimalPlaces(finalDisplay, roundingMethod);
       const normResult = normalizeForDecimalFloat(roundedResult.display, scientificExp);
       arithSteps += `<li><b>Step 5 (Normalize result):</b><br>`;
       arithSteps += `R = ${roundedResult.display} x 10^${scientificExp}${roundedResult.needsRounding ? " (rounded off)" : ""}<br>`;
@@ -776,6 +772,7 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
       arithSteps += `R = ${finalDisplay} (zero)<br></li>`;
     }
 
+    // convert to single precision and check overflow/underflow
     const finalScientific = `${finalDisplayForOutput}e${scientificExp}`;
     const conversionResult = convertToSinglePrecision(finalScientific);
     const overflow = conversionResult.specialCase === "+Infinity" || conversionResult.specialCase === "-Infinity";
