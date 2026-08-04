@@ -4,6 +4,10 @@
 ## Website deploy link:
 https://tanbueno.github.io/case-study-1-group-4-csarch2/
 
+## Video Walkthrough Youtube Link
+https://youtu.be/uY3VmlbBQJk
+
+
 ### Convert decimal to decimal-based single-precision
 This converts decimal numbers into their 32-bit IEEE 754 Decimal floating point representation. It supports decimal imputs, scientific notation, and special cases. The output is shown in binary and hexadecimal.
 ### Test Cases
