@@ -183,16 +183,43 @@ function getNormalizedDecimal(value) {
   if (magnitude.toLowerCase() === "nan" || magnitude.toLowerCase() === "infinity") {
     return { sign, significand: magnitude, exponent: 0, special: true };
   }
-  const numericValue = Number(magnitude);
-  if (!Number.isFinite(numericValue)) {
+
+  let text = magnitude;
+  let expFromE = 0;
+  const eIndex = text.toLowerCase().indexOf("e");
+  if (eIndex !== -1) {
+    expFromE = parseInt(text.slice(eIndex + 1), 10);
+    text = text.slice(0, eIndex);
+  }
+  if (!/^\d*\.?\d*$/.test(text) || text === "" || text === ".") {
     return { sign, significand: "0", exponent: 0, special: true };
   }
-  const normalized = numericValue.toExponential(15);
-  const [mantissa, exponentText] = normalized.split("e");
-  let significand = mantissa.replace(/^\-/, "");
-  significand = significand.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
-  significand = significand === "" ? "0" : significand;
-  return { sign, significand, exponent: Number(exponentText), special: false };
+
+  const dotIndex = text.indexOf(".");
+  let digits;
+  let pointExponent;
+  if (dotIndex === -1) {
+    digits = text;
+    pointExponent = 0;
+  } else {
+    digits = text.slice(0, dotIndex) + text.slice(dotIndex + 1);
+    pointExponent = -(text.length - 1 - dotIndex);
+  }
+
+  const leadingStripped = digits.replace(/^0+/, "");
+  digits = leadingStripped;
+  if (digits === "") {
+    return { sign: "", significand: "0", exponent: 0, special: false };
+  }
+  const trailingStripped = digits.replace(/0+$/, "");
+  const trailingZeroCount = digits.length - trailingStripped.length;
+  digits = trailingStripped === "" ? "0" : trailingStripped;
+
+  const exponent = pointExponent + trailingZeroCount + expFromE;
+  const significand = digits.length === 1 ? digits : digits[0] + "." + digits.slice(1);
+  const finalExponent = exponent + (digits.length - 1);
+
+  return { sign, significand, exponent: finalExponent, special: false };
 }
 
 function shiftDecimalPoint(significand, places) {
@@ -236,18 +263,21 @@ function formatSignificandForDisplay(significand) {
   if (!body || body === "0" || body === "0.") {
     return sign + "0";
   }
-  const digitsOnly = body.replace(".", "");
-  const decimalIndex = body.includes(".") ? body.indexOf(".") : body.length;
-  if (decimalIndex === 0) return `${sign}0.${digitsOnly}`;
-  if (decimalIndex > 0) {
-    const wholePart = body.slice(0, decimalIndex);
-    const fracPart = body.slice(decimalIndex + 1);
-    if (wholePart === "0") {
-      const trimmed = fracPart.replace(/0+$/, "");
-      return `${sign}0.${trimmed}`;
+  // If there is a decimal point, trim trailing zeros
+  if (body.includes(".")) {
+    let parts = body.split(".");
+    let whole = parts[0];
+    let frac = parts[1];
+    // Remove trailing zeros from fractional part
+    frac = frac.replace(/0+$/, "");
+    if (frac === "") {
+      return sign + whole; // no decimal point
+    } else {
+      return sign + whole + "." + frac;
     }
+  } else {
+    return sign + body;
   }
-  return `${sign}${body}`;
 }
 
 function roundSignificand(significand, method) {
@@ -284,12 +314,14 @@ function roundSignificand(significand, method) {
       roundedDigits = String(Number(kept) + 1).padStart(7, "0").slice(0, 7);
     }
   }
+  // Construct the rounded number with decimal point after first digit
   let roundedDisplay = `${sign}${roundedDigits[0]}.${roundedDigits.slice(1)}`;
   if (roundedDigits.length === 1) {
     roundedDisplay = `${sign}${roundedDigits}`;
   }
+  // Apply the formatting to strip trailing zeros
   return {
-    display: roundedDisplay,
+    display: formatSignificandForDisplay(roundedDisplay),
     needsRounding: true,
     digitCount
   };
@@ -385,21 +417,14 @@ function convertToSinglePrecision(inputDecimal) {
       
       let E = exp + 101;
       
-      if (E < 6) {
-        // Underflow / Denormalized
-        specialCase = "Underflow (Denormalized)";
+      if (E < 0) {
+        specialCase = signBit === "0" ? "+0 (Underflow)" : "-0 (Underflow)";
         combinationField = "00000";
         exponentField = "000000";
-        const shift = exp + 101;
-        let coeffBig = BigInt(cStr);
-        let adjustedCoeff = coeffBig * powerOfTen(-shift);
-        let adjStr = adjustedCoeff.toString();
-        adjStr = adjStr.padStart(7, "0");
-        const trailing = adjStr.substring(1, 7);
-        coefficientField1 = encodeDPD(trailing.substring(0, 3));
-        coefficientField2 = encodeDPD(trailing.substring(3, 6));
+        coefficientField1 = "0000000000";
+        coefficientField2 = "0000000000";
       } else if (E > 191) {
-        // Overflow → Infinity
+        // Overflow = Infinity
         specialCase = signBit === "0" ? "+Infinity" : "-Infinity";
         combinationField = "11110";
         exponentField = "000000";
@@ -475,6 +500,8 @@ function performDecimalSubtraction(signA, signB, significandA, significandB, sha
 }
 
 function performDecimalDivision(signA, signB, significandA, exponentA, significandB, exponentB, roundingMethod) {
+  // This function is now called with rounded significands from the caller.
+  // We'll keep it as is.
   const aVal = Number(significandA);
   const bVal = Number(significandB);
 
@@ -575,22 +602,42 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
 
   if (operation === "div") {
     // DIVISION
-    const aVal = Number(valA);
-    const bVal = Number(valB);
+    // Step 2: Subtract exponents
+    let expResult = expA - expB;
+    arithSteps += `<li><b>Step 2 (Subtract exponents):</b><br>`;
+    arithSteps += `New exponent = ${expA} - ${expB} = ${expResult}<br></li>`;
 
+    // Step 2.1: Round off the significands to 7 significant digits
+    const roundedA = roundSignificand(signA + valA, roundingMethod);
+    const roundedB = roundSignificand(signB + valB, roundingMethod);
+    const roundedValA = roundedA.display;
+    const roundedValB = roundedB.display;
+
+    arithSteps += `<li><b>Step 2.1 (Round off):</b><br>`;
+    arithSteps += `A = ${roundedValA} x 10^${expResult}<br>`;
+    arithSteps += `B = ${roundedValB} x 10^${expResult}<br></li>`;
+
+    // Extract signs and values for division
+    const signA_rounded = roundedValA.startsWith("-") ? "-" : "";
+    const signB_rounded = roundedValB.startsWith("-") ? "-" : "";
+    const valA_rounded = roundedValA.replace(/^[+-]/, "");
+    const valB_rounded = roundedValB.replace(/^[+-]/, "");
+
+    // Check division by zero using rounded B
+    const bVal = Number(valB_rounded);
     if (bVal === 0) {
-      if (aVal === 0) {
+      if (Number(valA_rounded) === 0) {
         const conv = convertToSinglePrecision("nan");
-        arithSteps += `<li><b>Step 2 (Operation: divide):</b><br>0 ÷ 0 is undefined → NaN</li>`;
+        arithSteps += `<li><b>Step 3 (Operation: divide):</b><br>0 ÷ 0 is undefined = NaN</li>`;
         document.getElementById("arith-result-decimal").innerHTML = "NaN";
         document.getElementById("arith-result-binary").textContent = conv.binaryResult;
         document.getElementById("arith-result-hex").textContent = conv.hexResult;
         return arithSteps;
       } else {
-        const sign = (signA !== signB) ? "-" : "";
+        const sign = (signA_rounded !== signB_rounded) ? "-" : "";
         const displaySign = sign === "-" ? "-" : "+";
         const conv = convertToSinglePrecision(sign + "inf");
-        arithSteps += `<li><b>Step 2 (Operation: divide):</b><br>Division by zero → ${displaySign}Infinity</li>`;
+        arithSteps += `<li><b>Step 3 (Operation: divide):</b><br>Division by zero = ${displaySign}Infinity</li>`;
         document.getElementById("arith-result-decimal").innerHTML = displaySign + "Infinity";
         document.getElementById("arith-result-binary").textContent = conv.binaryResult;
         document.getElementById("arith-result-hex").textContent = conv.hexResult;
@@ -598,14 +645,12 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
       }
     }
 
-    let expResult = expA - expB;
-    arithSteps += `<li><b>Step 2 (Subtract exponents):</b><br>`;
-    arithSteps += `New exponent = ${expA} - ${expB} = ${expResult}<br></li>`;
-
-    let sigResult = aVal / bVal;
+    // Step 3: Divide significands
+    let sigResult = Number(valA_rounded) / Number(valB_rounded);
     arithSteps += `<li><b>Step 3 (Divide significands):</b><br>`;
-    arithSteps += `${aVal} ÷ ${bVal} = ${sigResult}<br></li>`;
+    arithSteps += `${valA_rounded} ÷ ${valB_rounded} = ${sigResult}<br></li>`;
 
+    // Step 4: Normalize result
     let normalizedSig = sigResult;
     let normExp = expResult;
     while (normalizedSig >= 10) {
@@ -619,9 +664,10 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
     arithSteps += `<li><b>Step 4 (Normalize result):</b><br>`;
     arithSteps += `${sigResult} x 10^${expResult} = ${normalizedSig} x 10^${normExp}<br></li>`;
 
+    // Step 5: Round to 7 digits
     const sigStr = normalizedSig.toFixed(15);
     const rounded = roundSignificand(sigStr, roundingMethod);
-    const finalSign = (signA !== signB) ? "-" : "";
+    const finalSign = (signA_rounded !== signB_rounded) ? "-" : "";
     const finalDisplay = finalSign + rounded.display;
     const finalExp = normExp;
 
@@ -633,19 +679,22 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
       arithSteps += `${normalizedSig} = ${rounded.display} (no rounding needed)<br></li>`;
     }
 
+    // Step 6: Determine sign
     arithSteps += `<li><b>Step 6 (Determine sign):</b><br>`;
-    arithSteps += `Signs: A${signA ? "(-)" : "(+)"}, B${signB ? "(-)" : "(+)"} → result is ${finalSign ? "negative" : "positive"}<br>`;
+    arithSteps += `Signs: A${signA_rounded ? "(-)" : "(+)"}, B${signB_rounded ? "(-)" : "(+)"} = result is ${finalSign ? "negative" : "positive"}<br>`;
     arithSteps += `R = ${finalSign}${rounded.display} x 10^${finalExp}<br></li>`;
 
+    // Final normalization to 7-digit coefficient form
     const normResult = normalizeForDecimalFloat(finalSign + rounded.display, finalExp);
     arithSteps += `<li><b>Step 5 (Normalize and re-round result):</b><br>`;
     arithSteps += `R = ${finalSign}${rounded.display} x 10^${finalExp}<br>`;
     arithSteps += `R = ${normResult.significand} x 10^${normResult.exponent} (normalized to ddddddd x 10^e)<br></li>`;
 
-    let overflow = false;
-    let underflow = false;
-    if (finalExp > 90) overflow = true;
-    if (finalExp < -95) underflow = true;
+    const resultObj = { display: finalSign + rounded.display, exponent: finalExp };
+    const finalScientific = `${resultObj.display}e${resultObj.exponent}`;
+    const conversionResult = convertToSinglePrecision(finalScientific);
+    const overflow = conversionResult.specialCase === "+Infinity" || conversionResult.specialCase === "-Infinity";
+    const underflow = conversionResult.specialCase.includes("Underflow");
 
     if (overflow) {
       arithSteps += `<li><b>Overflow detected:</b><br>`;
@@ -655,27 +704,19 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
 
     if (underflow) {
       arithSteps += `<li><b>Underflow detected:</b><br>`;
-      arithSteps += `The exponent ${finalExp} is below the minimum representable exponent (-95).<br>`;
-      arithSteps += `Result is denormalized (subnormal).<br></li>`;
+      arithSteps += `The exponent ${finalExp} is below the minimum representable exponent (-101).<br>`;
+      arithSteps += `Result flushes to zero.<br></li>`;
     }
-
-    // Encoding
-    const resultObj = { display: finalSign + rounded.display, exponent: finalExp };
-    const finalScientific = `${resultObj.display}e${resultObj.exponent}`;
-    const conversionResult = convertToSinglePrecision(finalScientific);
 
     let displayText = '';
     if (conversionResult.specialCase === "+Infinity" || conversionResult.specialCase === "-Infinity") {
       displayText = conversionResult.specialCase;
     } else if (conversionResult.specialCase === "qNaN") {
       displayText = "NaN";
-    } else if (overflow) {
-      displayText = finalSign ? "-Infinity" : "+Infinity";
+    } else if (underflow) {
+      displayText = "0";
     } else {
       displayText = `${resultObj.display} x 10^${resultObj.exponent}`;
-      if (conversionResult.specialCase.includes("Underflow") || underflow) {
-        displayText += " (Denormalized/Underflow)";
-      }
     }
     document.getElementById("arith-result-decimal").innerHTML = displayText;
     document.getElementById("arith-result-binary").textContent = conversionResult.binaryResult;
@@ -735,10 +776,10 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
       arithSteps += `R = ${finalDisplay} (zero)<br></li>`;
     }
 
-    let overflow = false;
-    let underflow = false;
-    if (scientificExp > 90) overflow = true;
-    if (scientificExp < -95) underflow = true;
+    const finalScientific = `${finalDisplayForOutput}e${scientificExp}`;
+    const conversionResult = convertToSinglePrecision(finalScientific);
+    const overflow = conversionResult.specialCase === "+Infinity" || conversionResult.specialCase === "-Infinity";
+    const underflow = conversionResult.specialCase.includes("Underflow");
 
     if (overflow) {
       arithSteps += `<li><b>Overflow detected:</b><br>`;
@@ -749,27 +790,19 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
 
     if (underflow) {
       arithSteps += `<li><b>Underflow detected:</b><br>`;
-      arithSteps += `The exponent ${scientificExp} is below the minimum representable exponent (-95).<br>`;
-      arithSteps += `Result is denormalized (subnormal).<br></li>`;
+      arithSteps += `The exponent ${scientificExp} is below the minimum representable exponent (-101).<br>`;
+      arithSteps += `Result flushes to zero.<br></li>`;
     }
-
-    // Encoding
-    const finalScientific = `${finalDisplayForOutput}e${scientificExp}`;
-    const conversionResult = convertToSinglePrecision(finalScientific);
 
     let displayText = '';
     if (conversionResult.specialCase === "+Infinity" || conversionResult.specialCase === "-Infinity") {
       displayText = conversionResult.specialCase;
     } else if (conversionResult.specialCase === "qNaN") {
       displayText = "NaN";
-    } else if (overflow) {
-      const sign = finalDisplay.startsWith("-") ? "-" : "";
-      displayText = sign ? "-Infinity" : "+Infinity";
+    } else if (underflow) {
+      displayText = "0";
     } else {
       displayText = `${finalDisplayForOutput} x 10^${scientificExp}`;
-      if (conversionResult.specialCase.includes("Underflow") || underflow) {
-        displayText += " (Denormalized/Underflow)";
-      }
     }
     document.getElementById("arith-result-decimal").innerHTML = displayText;
     document.getElementById("arith-result-binary").textContent = conversionResult.binaryResult;
