@@ -311,6 +311,7 @@ function convertToSinglePrecision(inputDecimal) {
   let coefficientField1 = "";
   let coefficientField2 = "";
 
+  // ---- Special value handling ----
   if (value === "nan" || value === "qnan" || value === "quietnan") {
     signBit = "0";
     combinationField = "11111";
@@ -332,24 +333,19 @@ function convertToSinglePrecision(inputDecimal) {
     coefficientField1 = "0000000000";
     coefficientField2 = "0000000000";
     specialCase = "-Infinity";
-  } else if (value === "0" || value === "+0") {
-    signBit = "0";
+  } else if (value === "0" || value === "+0" || value === "-0") {
+    signBit = value.startsWith("-") ? "1" : "0";
     combinationField = "00000";
     exponentField = "000000";
     coefficientField1 = "0000000000";
     coefficientField2 = "0000000000";
-    specialCase = "+0";
-  } else if (value === "-0") {
-    signBit = "1";
-    combinationField = "00000";
-    exponentField = "000000";
-    coefficientField1 = "0000000000";
-    coefficientField2 = "0000000000";
-    specialCase = "-0";
+    specialCase = value.startsWith("-") ? "-0" : "+0";
   } else {
+    // ---- Parse scientific notation ----
     let parts = value.split("e");
     let base = parts[0];
     let exp = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+    
     if (base.startsWith("-")) {
       signBit = "1";
       base = base.replace("-", "");
@@ -357,6 +353,7 @@ function convertToSinglePrecision(inputDecimal) {
       signBit = "0";
       base = base.replace("+", "");
     }
+    
     const decIndex = base.indexOf(".");
     let cStr = "";
     if (decIndex === -1) {
@@ -365,47 +362,64 @@ function convertToSinglePrecision(inputDecimal) {
       cStr = base.replace(".", "");
       exp -= base.length - 1 - decIndex;
     }
+    
     cStr = cStr.replace(/^0+/, "");
     if (cStr === "") cStr = "0";
-    if (cStr.length < 7) {
-      cStr = cStr.padStart(7, "0");
-    } else if (cStr.length > 7) {
-      const diff = cStr.length - 7;
-      cStr = cStr.substring(0, 7);
-      exp += diff;
-    }
-    let E = exp + 101;
-    if (E < 6) {
-      specialCase = "Underflow (Denormalized)";
+    
+    // If coefficient is zero, return zero encoding
+    if (cStr === "0" || parseFloat(cStr) === 0) {
       combinationField = "00000";
-      exponentField = "000000";
-      const shift = exp + 101;
-      let coeffBig = BigInt(cStr);
-      let adjustedCoeff = coeffBig * powerOfTen(-shift);
-      let adjStr = adjustedCoeff.toString();
-      adjStr = adjStr.padStart(7, "0");
-      const trailing = adjStr.substring(1, 7);
-      coefficientField1 = encodeDPD(trailing.substring(0, 3));
-      coefficientField2 = encodeDPD(trailing.substring(3, 6));
-    } else if (E > 191) {
-      specialCase = signBit === "0" ? "+Infinity" : "-Infinity";
-      combinationField = "11110";
       exponentField = "000000";
       coefficientField1 = "0000000000";
       coefficientField2 = "0000000000";
+      specialCase = signBit === "0" ? "+0" : "-0";
     } else {
-      const eBin = E.toString(2).padStart(8, "0");
-      const expMSBs = eBin.substring(0, 2);
-      exponentField = eBin.substring(2, 8);
-      const MSD = parseInt(cStr[0], 10);
-      const msdBin = MSD.toString(2).padStart(4, "0");
-      if (MSD < 8) {
-        combinationField = expMSBs + msdBin.substring(1, 4);
-      } else {
-        combinationField = "11" + expMSBs + msdBin[3];
+      // Ensure 7-digit coefficient
+      if (cStr.length < 7) {
+        cStr = cStr.padStart(7, "0");
+      } else if (cStr.length > 7) {
+        const diff = cStr.length - 7;
+        cStr = cStr.substring(0, 7);
+        exp += diff;
       }
-      coefficientField1 = encodeDPD(cStr.substring(1, 4));
-      coefficientField2 = encodeDPD(cStr.substring(4, 7));
+      
+      let E = exp + 101;
+      
+      if (E < 6) {
+        // Underflow / Denormalized
+        specialCase = "Underflow (Denormalized)";
+        combinationField = "00000";
+        exponentField = "000000";
+        const shift = exp + 101;
+        let coeffBig = BigInt(cStr);
+        let adjustedCoeff = coeffBig * powerOfTen(-shift);
+        let adjStr = adjustedCoeff.toString();
+        adjStr = adjStr.padStart(7, "0");
+        const trailing = adjStr.substring(1, 7);
+        coefficientField1 = encodeDPD(trailing.substring(0, 3));
+        coefficientField2 = encodeDPD(trailing.substring(3, 6));
+      } else if (E > 191) {
+        // Overflow → Infinity
+        specialCase = signBit === "0" ? "+Infinity" : "-Infinity";
+        combinationField = "11110";
+        exponentField = "000000";
+        coefficientField1 = "0000000000";
+        coefficientField2 = "0000000000";
+      } else {
+        // Normalized
+        const eBin = E.toString(2).padStart(8, "0");
+        const expMSBs = eBin.substring(0, 2);
+        exponentField = eBin.substring(2, 8);
+        const MSD = parseInt(cStr[0], 10);
+        const msdBin = MSD.toString(2).padStart(4, "0");
+        if (MSD < 8) {
+          combinationField = expMSBs + msdBin.substring(1, 4);
+        } else {
+          combinationField = "11" + expMSBs + msdBin[3];
+        }
+        coefficientField1 = encodeDPD(cStr.substring(1, 4));
+        coefficientField2 = encodeDPD(cStr.substring(4, 7));
+      }
     }
   }
 
@@ -560,7 +574,7 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
   arithSteps += `B = ${signB}${valB} x 10^${expB}<br></li>`;
 
   if (operation === "div") {
-    //DIVISION
+    // DIVISION
     const aVal = Number(valA);
     const bVal = Number(valB);
 
@@ -645,7 +659,7 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
       arithSteps += `Result is denormalized (subnormal).<br></li>`;
     }
 
-    //Encoding
+    // Encoding
     const resultObj = { display: finalSign + rounded.display, exponent: finalExp };
     const finalScientific = `${resultObj.display}e${resultObj.exponent}`;
     const conversionResult = convertToSinglePrecision(finalScientific);
@@ -670,7 +684,7 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
     return arithSteps;
 
   } else {
-    //SUBTRACTION
+    // SUBTRACTION
     const aligned = alignWithStrings(valA, expA, valB, expB, signA, signB);
     const roundedA = roundSignificand(aligned.sigA, roundingMethod);
     const roundedB = roundSignificand(aligned.sigB, roundingMethod);
@@ -702,7 +716,7 @@ function renderStepsDecimalContent(operandA, operandB, roundingMethod, operation
     arithSteps += `B = ${roundedB.display} x 10^${aligned.sharedExp}<br>`;
     arithSteps += `R = ${opResult.display} x 10^${opResult.exponent}<br></li>`;
 
-    //Keep scientific exponent separate from integer exponent
+    // Keep scientific exponent separate from integer exponent
     let finalDisplay = opResult.display;
     let scientificExp = opResult.exponent;
     let finalDisplayForOutput = finalDisplay;
