@@ -5,7 +5,7 @@ function handleConversion() {
         alert("Input a Decimal Number");
         return;
     }
-    
+
     let binaryResult = "";
     let hexResult = "";
     let specialCase = "None";
@@ -75,8 +75,34 @@ function handleConversion() {
         }
 
         let E = exp + 101; //exponent
-        if (E < 0 || E > 191) {
-            alert("Exponent out of bounds");
+        if (E > 191) {
+            if (signBit === "1") {
+                binaryResult = "1 11110 000000 00000000000000000000";
+                hexResult = "0xF8000000";
+                specialCase = "-Infinity (Overflow)";
+            } else {
+                binaryResult = "0 11110 000000 00000000000000000000";
+                hexResult = "0x78000000";
+                specialCase = "+Infinity (Overflow)";
+            }
+            document.getElementById("out-convert-binary").innerText = binaryResult;
+            document.getElementById("out-convert-hex").innerText = hexResult;
+            document.getElementById("out-convert-special").innerText = specialCase;
+            return;
+        } 
+        else if (E < 0) {
+            if (signBit === "1") {
+                binaryResult = "1 01000 100101 00000000000000000000";
+                hexResult = "0xA2A00000";
+                specialCase = "-Zero (Underflow)";
+            } else {
+                binaryResult = "0 01000 100101 00000000000000000000";
+                hexResult = "0x22A00000";
+                specialCase = "+Zero (Underflow)";
+            }
+            document.getElementById("out-convert-binary").innerText = binaryResult;
+            document.getElementById("out-convert-hex").innerText = hexResult;
+            document.getElementById("out-convert-special").innerText = specialCase;
             return;
         }
 
@@ -88,7 +114,7 @@ function handleConversion() {
         let msdBin = MSD.toString(2).padStart(4, '0');//convert back to 4 bin string
         
         let combination = "";
-        if (MSD < 8) { 
+        if (MSD < 😎 { 
             combination = expMSBs + msdBin.substring(1, 4);
         } else {       
             combination = "11" + expMSBs + msdBin[3];
